@@ -1,0 +1,97 @@
+1) Configure the Firewall for the Docker Droplet:
+
+a) Go to: https://marketplace.digitalocean.com/
+
+b) Type "Docker"in the search bar and click "Create Docker Droplet".
+
+c) Change the CPU to "Regular 2 GB / 1 CPU".
+
+d) Add a Public SSH Key and click "Create Droplet".
+
+e) Add a DNS A Record (Name: @, Value: Your Public IP).
+
+f) Add a DNS A Record (Name: www, Value: Your Public IP).
+
+g) Allow inbound port 80 for all IPv4 and IPv6 addresses (necessary for SSL certificate registration - we will change this later).
+
+h) Allow inbound ports 22, 443, 5000, 5002, 5901, 6901, 8080 for your public IP only.
+
+i) Add this Docker Droplet public IP to the Wordpress Droplet Firewall (add it for all inbound ports).
+(If you have not created the Wordpress droplet yet, you can do this later.)
+
+--------------------------------------------------------------------------------------------------------------------------
+2) SSH into your digital ocean instance and run vnc-and-selenium-setup.sh
+
+┌──(kali㉿host)-[~]
+└─$ ssh root@docker droplet ip
+
+root@digital-ocean-hostname:~# wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/cloud/setup/scripts/vnc-and-selenium-setup.sh -O vnc-and-selenium-setup.sh
+
+root@digital-ocean-hostname:~# chmod +x vnc-and-selenium-setup.sh
+
+root@digital-ocean-hostname:~# ./vnc-and-selenium-setup.sh
+----------------------------------------------------------------------------------------------------------
+3) Run cloned-login-setup.sh
+
+root@digital-ocean-hostname:~# wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/cloud/setup/scripts/cloned-login-setup.sh -O cloned-login-setup.sh
+
+root@digital-ocean-hostname:~# chmod +x cloned-login-setup.sh
+
+root@digital-ocean-hostname:~# ./cloned-login-setup.sh
+
+(Note: When prompted for the "Slack Webhook" you can hit "enter" to skip it.)
+
+----------------------------------------------------------------------------------------------------------------------------------
+4) Limit SSH, HTTP, and HTTPS access in the Firewall
+
+Restrict inbound port 80 to your own public IP address. 
+
+IMPORTANT: Make sure the firewall is applied all of our inbound ports are limited to our own public IP address.
+(This ensures that only we can access this application. If involved in an authorized phishing engagement, add only the public IPs that you're authorized to test.)
+
+----------------------------------------------------------------------------------------------------------
+5. Transfer the Static Format Files to the Docker Droplet source directory
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/]
+└─$ mkdir wordpress
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/]
+└─$ cd wordpress
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/load-styles.php?c=0&dir=ltr&load%5Bchunk_0%5D=dashicons,buttons,forms,l10n,login&ver=6.8.2" > wp-login.css
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/load-scripts.php?c=0&load%5Bchunk_0%5D=clipboard,jquery-core,jquery-migrate,zxcvbn-async,wp-hooks&ver=6.8.2" > wp-scripts.js
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ mkdir -p images
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/images/wordpress-logo.svg" > images/wordpress-logo.svg
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/images/w-logo-blue.png" > images/w-logo-blue.png
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ mkdir -p wp-includes/fonts
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-includes/fonts/dashicons.woff2" > wp-includes/fonts/dashicons.woff2
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-includes/fonts/dashicons.ttf" > wp-includes/fonts/dashicons.ttf
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-includes/fonts/dashicons.eot" > wp-includes/fonts/dashicons.eot
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ scp -r wp-login.css wp-scripts.js images/ wp-includes/ root@docker droplet public ip:/root/static
+root@172.16.42.1's password:
+wp-login.css                           100%  101KB   1.2MB/s   00:00
+wp-scripts.js                          100%  113KB   2.2MB/s   00:00
+w-logo-blue.png                        100% 3113   677.0KB/s   00:00
+wordpress-logo.svg                     100% 1521   190.2KB/s   00:00
+dashicons.eot                          100%   55KB   1.9MB/s   00:00
+dashicons.ttf                          100%   55KB   1.6MB/s   00:00
+dashicons.woff2                        100%   26KB   1.3MB/s   00:00
