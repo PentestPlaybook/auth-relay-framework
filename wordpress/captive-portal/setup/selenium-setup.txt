@@ -1,0 +1,25 @@
+To Set Up Selenium in a Kali VM - Run these commands:
+
+┌──(kali㉿kali)-[~]
+└─$ sudo apt update                       
+
+┌──(kali㉿kali)-[~]
+└─$ python3 -m venv ~/selenium
+
+┌──(kali㉿kali)-[~]
+└─$ source ~/selenium/bin/activate
+
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ pip3 install selenium                                                                                                                                     
+
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ sudo apt install firefox-esr
+
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ wget https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-linux64.tar.gz
+                                                                                                                                                      
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ tar -xzf geckodriver-v0.33.0-linux64.tar.gz
+
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ sudo mv geckodriver /usr/local/bin/
