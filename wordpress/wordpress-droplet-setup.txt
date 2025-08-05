@@ -1,0 +1,204 @@
+1) Configure the Firewall for the Wordpress Droplet:
+
+a) Go to: https://marketplace.digitalocean.com/
+
+b) Type "Wordpress"in the search bar and click "Create Wordpress Droplet".
+
+c) Change the CPU to "Regular 2 GB / 1 CPU".
+
+d) Add a Public SSH Key and click "Create Droplet".
+
+e) Add a DNS A Record (Name: @, Value: Your Public IP).
+
+f) Add a DNS A Record (Name: www, Value: Your Public IP).
+
+g) Allow inbound port 80 for all IPv4 and IPv6 addresses (necessary for SSL certificate registration - we will change this later).
+
+h) Allow inbound ports 22, 443, for your own public IP address only.
+
+i) Add the Docker Droplet IP to the Wordpress Droplet Firewall (add it for all inbound ports).
+(If you have not created the Docker droplet yet, you can do this later.)
+
+--------------------------------------------------------------------------------------------------------------------------
+2) SSH into your digital ocean instance and configure Wordpress
+
+┌──(kali㉿host)-[~]
+└─$ ssh root@wordpress droplet ip
+
+********************************************************************************
+Welcome to DigitalOcean's One-Click WordPress Droplet.
+
+Domain/Subdomain name: (your domain)
+
+Your Email Address: (your personal email)
+
+Username: (username for wordpress admin)
+
+Password: (password for wordpress admin)
+
+Blog Title: (Title for your Wordpress Blog)
+
+Is the information correct? [Y/n] y
+
+Would you like to use LetsEncrypt (certbot) to configure SSL(https) for your new site? (y/n): y
+
+Enter email address (used for urgent renewal and security notices)
+ (Enter 'c' to cancel): (your personal email)
+
+Please read the Terms of Service at
+https://letsencrypt.org/documents/LE-SA-v1.5-February-24-2025.pdf. You must
+agree in order to register with the ACME server. Do you agree?
+(Y)es/(N)o: y
+
+Would you be willing, once your first certificate is successfully issued, to
+share your email address with the Electronic Frontier Foundation, a founding
+partner of the Let's Encrypt project and the non-profit organization that
+develops Certbot? We'd like to send you email about our work encrypting the web,
+EFF news, campaigns, and ways to support digital freedom.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+(Y)es/(N)o: N
+
+Which names would you like to activate HTTPS for?
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+1: your-domain.info
+2: www.your-domain.info
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Select the appropriate numbers separated by commas and/or spaces, or leave input
+blank to select all options shown (Enter 'c' to cancel): 1,2
+
+Requesting a certificate for your-domain.info and www.your-domain.info
+
+Installation complete. Access your new WordPress site in a browser to continue.
+
+(Note: If this fails, ensure the DNS A Records are set, the DNS changes have propagated, inbound port 80 is allowed for all IPs, and re-run: "sudo certbot --apache")
+
+----------------------------------------------------------------------------------------------------------------------------------
+3) Limit SSH, HTTP, and HTTPS access in the Firewall
+
+Restrict inbound port 80 to your own public IP address.
+
+----------------------------------------------------------------------------------------------------------------------------------
+4) Install mini-orange
+
+root@digital-ocean-hostname:~# cd /var/www/html
+
+root@digital-ocean-hostname:/var/www/html# ls -1
+
+root@digital-ocean-hostname:/var/www/html# sudo -u www-data wp plugin install miniorange-2-factor-authentication --activate
+
+----------------------------------------------------------------------------------------------------------------------------------
+4) Configure mini-orange
+
+a) Log into your Wordpress site at: https://your-domain.info/wp-login.php.
+
+b) Click "Let's get started!" in the mini orange 2FA setup wizard.
+
+c) Select "Users setup 2FA after first login" and click "Continue Setup".
+
+d) Select "Only for selected roles", click "Administrator", and click "Continue Setup".
+
+e) Select "Users should be directly enforced for 2FA setup." and click "All Done".
+
+f) Click "Advance Settings".
+
+----------------------------------------------------------------------------------------------------------------------------------
+5) Create and Configure a Sendgrid Account
+
+a) Go to: https://app.sendgrid.com/signup
+
+b) Click "Sign up now!".
+
+c) Complete the registration process.
+
+d) Make sure to download your recovery code.
+
+e) Sign into your account.
+
+f) Enter your details and click "Next".
+
+g) Enter your domain (the one you used when installing Wordpress) and click "next".
+
+h) Click "Setup Now" (under "Install DNS Records").
+
+i) Add the TXT and CNAME records to your host's DNS section and then click "Next" in SendGrid.
+
+j) Under "Select your Email API plan" and "Select your Marketing Campaigns plan", select "60 day trial."
+
+k) Under "Settings" click "API Keys" and "Create API Key".
+
+l) Name the API Key "Wordpress", Select "Full Access" and click "Create & View".
+
+m) Copy the API Key and save it somewhere safe.
+
+n) After you save the API key, click "Done".
+
+----------------------------------------------------------------------------------------------------------------------------------
+6) Install WP Mail SMTP:
+
+root@digital-ocean-hostname:# cd /var/www/html
+
+root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp plugin install wp-mail-smtp --activate
+
+----------------------------------------------------------------------------------------------------------------------------------
+7) Tell WP Mail SMTP to use SendGrid:
+
+root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp option update wp_mail_smtp --format=json <<'JSON'
+{
+  "mail": {
+    "from_email": "admin@your domain",
+    "from_name":  "WordPress",
+    "mailer":     "sendgrid",
+    "return_path": true
+  },
+  "sendgrid": {
+    "api_key": "your sendgrid api key"
+  }
+}
+JSON
+
+
+(Important: Make sure the from_email value ends with your domain. Do not use your personal email here.)
+
+----------------------------------------------------------------------------------------------------------------------------------
+8) Send a Test Email
+
+root@digital-ocean-hostname:/var/www/html# sudo -u www-data wp eval '                                                   
+wp_mail(
+    "your personal email",                       // To
+    "WP-CLI SMTP test – " . current_time("mysql"),    // Subject
+    "If you’re reading this, WordPress is delivering through SendGrid." // Body
+);
+'
+
+
+Check your email to confirm the message was received.
+(If this fails, make sure the "from_email" value from the previous step ends with your domain.)
+
+----------------------------------------------------------------------------------------------------------------------------------
+8) Set up 2FA for the "target" user
+
+a) Log out and log back into Wordpress.
+
+b) Under "Configure a Two-Factor method to protect your account" select "OTP Over Email".
+
+c) Enter the 2FA code sent to your email.
+
+d) Click "Download Codes" to download your recovery codes.
+
+e) Click "Finish Setup".
+
+f) Click "miniOrange 2-Factor" in the menu sidebar to verify how many emails you have left.
+
+----------------------------------------------------------------------------------------------------------------------------------
+9) Transfer the recovery codes to your host using scp tool
+
+┌──(kali㉿kali)-[~]
+└─$ sudo systemctl start ssh      
+                                                                                                                                                                         
+┌──(kali㉿kali)-[~]
+└─$ ls Downloads
+miniOrange2-factor-BackupCodes.txt
+
+PS C:\Users\user\Documents> scp kali@<your kali ip>:/home/kali/Downloads/miniOrange2-factor-BackupCodes.txt .
+kali@<your kali ip>'s password:
+miniOrange2-factor-BackupCodes.txt                                                    100%  358   349.6KB/s   00:00
