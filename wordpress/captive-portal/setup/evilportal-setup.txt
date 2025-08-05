@@ -1,0 +1,297 @@
+1) Limiting Access
+
+IMPORTANT: Ensure your open wifi network is disabled (http://172.16.42.1:1471/#/PineAP/open) and your WPA network is enabled with a secret password (http://172.16.42.1:1471/#/PineAP/aps). 
+a) This will ensure that only you have access to this testing network. (Only allow access to others if you are involved in an authorized phishing engagement and this exercise is in scope.)
+b) You can also add your MAC address to the client allow list (http://172.16.42.1:1471/#/PineAP/filtering), to acheive Security-In-Depth.
+
+-------------------------------------------------------------------------------------------------------------
+2). Install Evilportal on the WiFi Pineapple
+a) Connect to the Admin Portal at 172.16.42.1:1471
+
+b) Connect to Internet
+    i.) Ethernet Connection: Superior to WiFi connection
+    ii.) WiFi Connection: (Settings > Networking > select the Client Mode Interface (under Wireless Client Mode) > click Scan  > select your AP > enter the Network Password > Click "Connect")
+
+c) Perform an internet speed test to measure bandwidth (download/upload speeds).
+
+d) Click on "Modules & Packages" in the sidebar.
+e) Click the "Modules" tab
+f) Click "Get Available Modules" (you may have to click it several times)
+g) Click "Install" next to the EvilPortal module
+h) Click "Install" (you may have to click it several times)
+i) Click the "Installed" tab
+j) Click the "Pin" icon to pin EvilPortal to the Sidebar.
+k) Click on EvilPortal in the sidebar. 
+l) Make sure you see this screen: "Welcome to Evil Portal. Lets get started. You need to install some dependencies before you can use this module. This will make a request to the internet." If you don't see this screen (referencing the dependencies), do not proceed - you will get "403 Forbidden nginx/1.19.6", when previewing the portal.)
+m) Click "Install Dependencies".
+n) Disconnect from the internet
+
+-------------------------------------------------------------------------------------------------------------
+3. Create a New Captive Portal
+
+a) Click "New Portal", ensure "Basic Portal" is selected, and click "Next. 
+
+b) Enter "Wordpress" as the portal name and click "Done".
+
+-------------------------------------------------------------------------------------------------------------
+4. Activate the Captive Portal
+
+a) IMPORTANT: Click "Activate", next to the Portal Name.
+(Note: If this fails, make sure the *.ep file name matches the portal name (including case).)
+
+-------------------------------------------------------------------------------------------------------------
+5. Open the Terminal and Delete the Default Files from the EvilPortal source directory
+
+root@mk7:~# ls /root/portals/Wordpress/
+MyPortal.php  Wordpress.ep  helper.php    index.php
+
+root@mk7:~# rm -f /root/portals/Wordpress/*
+
+root@mk7:~# ls /root/portals/Wordpress/
+
+(If you do not find the files, make sure you have activated the captive portal.)
+
+-------------------------------------------------------------------------------------------------------------
+6. Transfer the Web Root Files to the EvilPortal source directory
+
+PS C:\Users\user\> wsl -d kali-linux
+┏━(Message from Kali developers)
+┃
+┃ This is a minimal installation of Kali Linux, you likely
+┃ want to install supplementary tools. Learn how:
+┃ ⇒ https://www.kali.org/docs/troubleshooting/common-minimum-setup/
+┃
+┗━(Run: “touch ~/.hushlogin” to hide this message)
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/]
+└─$ git clone https://github.com/PentestPlaybook/auth-relay-framework.git
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/]
+└─$ tree auth-relay-framework
+auth-relay-framework
+├── README.md
+└── wordpress
+    ├── captive-portal
+    │   ├── execution
+    │   │   ├── scripts
+    │   │   │   └── wordpress-relay.py
+    │   │   └── wordpress-relay.txt
+    │   └── setup
+    │       ├── evil-portal-setup.txt
+    │       ├── selenium-setup.txt
+    │       └── web-root
+    │           ├── helper.php
+    │           ├── index.php
+    │           ├── login_error.html
+    │           ├── login.html
+    │           ├── login_result.php
+    │           ├── mfa_failed.html
+    │           ├── mfa_handler.php
+    │           ├── mfa.html
+    │           ├── mfa_result.php
+    │           ├── mfa_status.php
+    │           ├── success.html
+    │           └── Wordpress.ep
+    ├── cloud
+    │   ├── execution
+    │   │   ├── scripts
+    │   │   │   └── wordpress-relay.sh
+    │   │   └── wordpress-relay.txt
+    │   └── setup
+    │       ├── docker-droplet-setup.txt
+    │       └── scripts
+    │           ├── cloned-login-setup.sh
+    │           └── vnc-and-selenium-setup.sh
+    └── wordpress-droplet-setup.txt
+
+12 directories, 23 files
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/]
+└─$ scp ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/* root@172.16.42.1:/root/portals/Wordpress/
+root@172.16.42.1's password:
+helper.php                             100% 7478     1.2MB/s   00:00
+index.php                              100%  118    51.0KB/s   00:00
+login_error.html                       100% 4037     1.2MB/s   00:00
+login.html                             100% 4251     1.1MB/s   00:00
+login_result.php                       100%  725   258.1KB/s   00:00
+mfa_failed.html                        100% 4423     1.0MB/s   00:00
+mfa_handler.php                        100% 4814   765.1KB/s   00:00
+mfa.html                               100% 2547   830.0KB/s   00:00
+mfa_result.php                         100%  670   287.9KB/s   00:00
+mfa_status.php                         100%  461   206.5KB/s   00:00
+success.html                           100%  866   350.9KB/s   00:00
+Wordpress.ep                           100%  129    62.4KB/s   00:00
+
+-------------------------------------------------------------------------------------------------------------
+7. Transfer the Static Format Files to the EvilPortal source directory
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/]
+└─$ mkdir wordpress
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/]
+└─$ cd wordpress
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/load-styles.php?c=0&dir=ltr&load%5Bchunk_0%5D=dashicons,buttons,forms,l10n,login&ver=6.8.2" > wp-login.css
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/load-scripts.php?c=0&load%5Bchunk_0%5D=clipboard,jquery-core,jquery-migrate,zxcvbn-async,wp-hooks&ver=6.8.2" > wp-scripts.js
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ mkdir -p images
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/images/wordpress-logo.svg" > images/wordpress-logo.svg
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-admin/images/w-logo-blue.png" > images/w-logo-blue.png
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ mkdir -p wp-includes/fonts
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-includes/fonts/dashicons.woff2" > wp-includes/fonts/dashicons.woff2
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-includes/fonts/dashicons.ttf" > wp-includes/fonts/dashicons.ttf
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ curl -s "https://(a wordpress domain)/wp-includes/fonts/dashicons.eot" > wp-includes/fonts/dashicons.eot
+
+┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
+└─$ scp -r wp-login.css wp-scripts.js images/ wp-includes/ root@172.16.42.1:/root/portals/Wordpress/
+root@172.16.42.1's password:
+wp-login.css                           100%  101KB   1.2MB/s   00:00
+wp-scripts.js                          100%  113KB   2.2MB/s   00:00
+w-logo-blue.png                        100% 3113   677.0KB/s   00:00
+wordpress-logo.svg                     100% 1521   190.2KB/s   00:00
+dashicons.eot                          100%   55KB   1.9MB/s   00:00
+dashicons.ttf                          100%   55KB   1.6MB/s   00:00
+dashicons.woff2                        100%   26KB   1.3MB/s   00:00
+
+-------------------------------------------------------------------------------------------------------------
+8. Confirm the Portal Files have been Transferred EvilPortal source directory
+
+PS C:\Users\user> ssh root@172.16.42.1
+
+root@mk7:~# find /root/portals/Wordpress/ | sed 's|[^/]*/|  |g'
+        wp-scripts.js
+        images
+          w-logo-blue.png
+          wordpress-logo.svg
+        login.html
+        .enable
+        success.html
+        mfa.html
+        mfa_handler.php
+        .disable
+        login_result.php
+        mfa_failed.html
+        index.php
+        helper.php
+        mfa_result.php
+        wp-login.css
+        login_error.html
+        wp-includes
+          fonts
+            dashicons.woff2
+            dashicons.eot
+            dashicons.ttf
+        Wordpress.ep
+        mfa_status.php
+
+-------------------------------------------------------------------------------------------------------------
+9. Deploy Portal to Web Root
+
+root@mk7:~/portals/Wordpress# cd /www
+
+root@mk7:~/portals/wordpress# rm MyPortal.php
+
+root@mk7:~/portals/wordpress# ln -sf /root/portals/Wordpress/* .
+
+root@mk7:~/portals/wordpress# ln -sf /root/portals/Wordpress/images .
+
+root@mk7:~/portals/wordpress# ln -sf /root/portals/Wordpress/wp-includes .
+
+root@mk7:/www# ls -lah
+drwxr-xr-x    1 root     root        4.0K Aug  4 21:40 .
+drwxr-xr-x    1 root     root        4.0K Aug  4 21:19 ..
+lrwxrwxrwx    1 root     root          34 Aug  4 21:40 helper.php -> /root/portals/Wordpress/helper.php
+lrwxrwxrwx    1 root     root          30 Aug  4 21:40 images -> /root/portals/Wordpress/images
+lrwxrwxrwx    1 root     root          33 Aug  4 21:40 index.php -> /root/portals/Wordpress/index.php
+lrwxrwxrwx    1 root     root          34 Aug  4 21:40 login.html -> /root/portals/Wordpress/login.html
+lrwxrwxrwx    1 root     root          40 Aug  4 21:40 login_error.html -> /root/portals/Wordpress/login_error.html
+lrwxrwxrwx    1 root     root          40 Aug  4 21:40 login_result.php -> /root/portals/Wordpress/login_result.php
+lrwxrwxrwx    1 root     root          32 Aug  4 21:40 mfa.html -> /root/portals/Wordpress/mfa.html
+lrwxrwxrwx    1 root     root          39 Aug  4 21:40 mfa_failed.html -> /root/portals/Wordpress/mfa_failed.html
+lrwxrwxrwx    1 root     root          39 Aug  4 21:40 mfa_handler.php -> /root/portals/Wordpress/mfa_handler.php
+lrwxrwxrwx    1 root     root          38 Aug  4 21:40 mfa_result.php -> /root/portals/Wordpress/mfa_result.php
+lrwxrwxrwx    1 root     root          38 Aug  4 21:40 mfa_status.php -> /root/portals/Wordpress/mfa_status.php
+lrwxrwxrwx    1 root     root          36 Aug  4 21:40 success.html -> /root/portals/Wordpress/success.html
+lrwxrwxrwx    1 root     root          36 Aug  4 21:40 Wordpress.ep -> /root/portals/Wordpress/Wordpress.ep
+lrwxrwxrwx    1 root     root          35 Aug  4 21:40 wp-includes -> /root/portals/Wordpress/wp-includes
+lrwxrwxrwx    1 root     root          36 Aug  4 21:40 wp-login.css -> /root/portals/Wordpress/wp-login.css
+lrwxrwxrwx    1 root     root          37 Aug  4 21:40 wp-scripts.js -> /root/portals/Wordpress/wp-scripts.js
+
+-------------------------------------------------------------------------------------------------------------
+10. Backup Current Nginx Config
+
+root@mk7:~/portals/Wordpress# cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
+
+-------------------------------------------------------------------------------------------------------------
+11. Add the following location blocks to /etc/nginx/nginx.conf 
+(Inside the server block, before the existing "location ~ \.php$" block)
+
+                location = /capture {
+                        fastcgi_pass unix:/var/run/php7-fpm.sock;
+                        fastcgi_param SCRIPT_FILENAME $document_root/helper.php;
+                        include fastcgi_params;
+                        fastcgi_param REQUEST_METHOD $request_method;
+                        fastcgi_param CONTENT_TYPE $content_type;
+                        fastcgi_param CONTENT_LENGTH $content_length;
+                }
+                location = /mfa_result {
+                        fastcgi_pass unix:/var/run/php7-fpm.sock;
+                        fastcgi_param SCRIPT_FILENAME $document_root/mfa_result.php;
+                        include fastcgi_params;
+                        fastcgi_param REQUEST_METHOD $request_method;
+                        fastcgi_param CONTENT_TYPE $content_type;
+                        fastcgi_param CONTENT_LENGTH $content_length;
+                }
+                location = /mfa_status {
+                        fastcgi_pass unix:/var/run/php7-fpm.sock;
+                        fastcgi_param SCRIPT_FILENAME $document_root/mfa_status.php;
+                        include fastcgi_params;
+                        fastcgi_param REQUEST_METHOD $request_method;
+                        fastcgi_param CONTENT_TYPE $content_type;
+                        fastcgi_param CONTENT_LENGTH $content_length;
+                }
+                location = /login_result {
+                        fastcgi_pass unix:/var/run/php7-fpm.sock;
+                        fastcgi_param SCRIPT_FILENAME $document_root/login_result.php;
+                        include fastcgi_params;
+                        fastcgi_param REQUEST_METHOD $request_method;
+                        fastcgi_param CONTENT_TYPE $content_type;
+                        fastcgi_param CONTENT_LENGTH $content_length;
+                }
+
+-------------------------------------------------------------------------------------------------------------
+12. Test and Reload Nginx
+
+root@mk7:~/portals/Wordpress# nginx -t
+
+root@mk7:~/portals/Wordpress# nginx -s reload
+(Note: Disregard this error: "2025/07/31 19:35:15 [error] 10561#0: invalid PID number "" in "/var/run/nginx.pid"")
+
+-------------------------------------------------------------------------------------------------------------
+13. Start and Enable the Captive Portal in the UI
+
+a) Click "Start"
+(Starting it through the command line will not create /tmp/EVILPORTAL_CLIENTS.txt)
+
+(Make sure the web server also started.)
+
+b) Click "Preview" and confirm the login page is rendered correctly
+
+c) Click "Enable on boot"
+(This will ensure the internet is inaccessible to everyone, following a reboot)
