@@ -2,25 +2,28 @@
 
 a) Go to: https://marketplace.digitalocean.com/
 
-b) Type "Docker"in the search bar and click "Create Docker Droplet".
+b) Search "Docker" in the search bar and click "Create Docker Droplet".
 
 c) Change the CPU to "Regular 2 GB / 1 CPU".
 
 d) Add a Public SSH Key and click "Create Droplet".
 
-e) Add a DNS A Record (Name: @, Value: Your Public IP).
+e) Allow inbound port 80 for all IPv4 and IPv6 addresses (necessary for SSL certificate issuance - we will change this later).
 
-f) Add a DNS A Record (Name: www, Value: Your Public IP).
+f) Allow inbound ports 22, 443, 5000, 5002, 5901, 6901, 8080 for your public IP only.
 
-g) Allow inbound port 80 for all IPv4 and IPv6 addresses (necessary for SSL certificate registration - we will change this later).
-
-h) Allow inbound ports 22, 443, 5000, 5002, 5901, 6901, 8080 for your public IP only.
-
-i) Add this Docker Droplet public IP to the Wordpress Droplet Firewall (add it for all inbound ports).
+g) Add this Docker Droplet's public IP to the Wordpress Droplet's Firewall (add it for all inbound ports).
 (If you have not created the Wordpress droplet yet, you can do this later.)
 
 --------------------------------------------------------------------------------------------------------------------------
-2) SSH into your digital ocean instance and run vnc-and-selenium-setup.sh
+2) Configure DNS A Records with your DNS provider
+
+a) Add a DNS A Record (Name: @, Value: Docker Droplet Public IP).
+
+b) Add a DNS A Record (Name: www, Value: Docker Droplet Public IP).
+
+--------------------------------------------------------------------------------------------------------------------------
+3) SSH into your digital ocean instance and run vnc-and-selenium-setup.sh
 
 ┌──(kali㉿host)-[~]
 └─$ ssh root@docker droplet ip
@@ -30,8 +33,9 @@ root@digital-ocean-hostname:~# wget https://raw.githubusercontent.com/PentestPla
 root@digital-ocean-hostname:~# chmod +x vnc-and-selenium-setup.sh
 
 root@digital-ocean-hostname:~# ./vnc-and-selenium-setup.sh
+
 ----------------------------------------------------------------------------------------------------------
-3) Run cloned-login-setup.sh
+4) Run cloned-login-setup.sh
 
 root@digital-ocean-hostname:~# wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/cloud/setup/scripts/cloned-login-setup.sh -O cloned-login-setup.sh
 
@@ -39,18 +43,20 @@ root@digital-ocean-hostname:~# chmod +x cloned-login-setup.sh
 
 root@digital-ocean-hostname:~# ./cloned-login-setup.sh
 
-(Note: When prompted for the "Slack Webhook" you can hit "enter" to skip it.)
+(Note: When prompted for the "Slack Webhook" you may hit "enter" to skip it.)
 
 ----------------------------------------------------------------------------------------------------------------------------------
-4) Limit SSH, HTTP, and HTTPS access in the Firewall
+5) Limit SSH, HTTP, and HTTPS access in the Firewall
 
 Restrict inbound port 80 to your own public IP address. 
 
-IMPORTANT: Make sure the firewall is applied all of our inbound ports are limited to our own public IP address.
-(This ensures that only we can access this application. If involved in an authorized phishing engagement, add only the public IPs that you're authorized to test.)
+IMPORTANT: Make sure the firewall is applied and all of our inbound ports are limited to our own public IP address. This ensures that only you can access this application. 
+(If you are involved in an authorized phishing engagement, add only the public IPs that you're authorized to test.)
 
 ----------------------------------------------------------------------------------------------------------
-5. Transfer the Static Format Files to the Docker Droplet source directory
+6. Transfer the Static Format Files to the Docker Droplet source directory
+
+(Note: If you have already set up the Wordpress Droplet, you should have already downloaded this content. You can skip to the last command.)
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ mkdir wordpress
