@@ -2,25 +2,28 @@
 
 a) Go to: https://marketplace.digitalocean.com/
 
-b) Type "Wordpress"in the search bar and click "Create Wordpress Droplet".
+b) Search "Wordpress" in the search bar and click "Create Wordpress Droplet".
 
 c) Change the CPU to "Regular 2 GB / 1 CPU".
 
 d) Add a Public SSH Key and click "Create Droplet".
 
-e) Add a DNS A Record (Name: @, Value: Your Public IP).
+e) Allow inbound port 80 for all IPv4 and IPv6 addresses (necessary for SSL certificate issuance - we will change this later).
 
-f) Add a DNS A Record (Name: www, Value: Your Public IP).
+f) Allow inbound ports 22, 443, for your own public IP address only.
 
-g) Allow inbound port 80 for all IPv4 and IPv6 addresses (necessary for SSL certificate registration - we will change this later).
-
-h) Allow inbound ports 22, 443, for your own public IP address only.
-
-i) Add the Docker Droplet IP to the Wordpress Droplet Firewall (add it for all inbound ports).
+g) Add the Docker Droplet's Public IP to the Wordpress Droplet's Firewall (add it for all inbound ports).
 (If you have not created the Docker droplet yet, you can do this later.)
 
 --------------------------------------------------------------------------------------------------------------------------
-2) SSH into your digital ocean instance and configure Wordpress
+2) Configure DNS A Records with your DNS provider
+
+a) Add a DNS A Record (Name: @, Value: Your Wordpress Droplet Public IP).
+
+b) Add a DNS A Record (Name: www, Value: Your Wordpress Droplet Public IP).
+
+--------------------------------------------------------------------------------------------------------------------------
+3) SSH into your digital ocean instance and configure Wordpress
 
 ┌──(kali㉿host)-[~]
 └─$ ssh root@wordpress droplet ip
@@ -73,12 +76,12 @@ Installation complete. Access your new WordPress site in a browser to continue.
 (Note: If this fails, ensure the DNS A Records are set, the DNS changes have propagated, inbound port 80 is allowed for all IPs, and re-run: "sudo certbot --apache")
 
 ----------------------------------------------------------------------------------------------------------------------------------
-3) Limit SSH, HTTP, and HTTPS access in the Firewall
+4) Limit SSH, HTTP, and HTTPS access in the Firewall
 
 Restrict inbound port 80 to your own public IP address.
 
 ----------------------------------------------------------------------------------------------------------------------------------
-4) Install mini-orange
+5) Install mini-orange
 
 root@digital-ocean-hostname:~# cd /var/www/html
 
@@ -87,7 +90,7 @@ root@digital-ocean-hostname:/var/www/html# ls -1
 root@digital-ocean-hostname:/var/www/html# sudo -u www-data wp plugin install miniorange-2-factor-authentication --activate
 
 ----------------------------------------------------------------------------------------------------------------------------------
-4) Configure mini-orange
+6) Configure mini-orange
 
 a) Log into your Wordpress site at: https://your-domain.info/wp-login.php.
 
@@ -102,7 +105,7 @@ e) Select "Users should be directly enforced for 2FA setup." and click "All Done
 f) Click "Advance Settings".
 
 ----------------------------------------------------------------------------------------------------------------------------------
-5) Create and Configure a Sendgrid Account
+7) Create and Configure a Sendgrid Account
 
 a) Go to: https://app.sendgrid.com/signup
 
@@ -133,14 +136,14 @@ m) Copy the API Key and save it somewhere safe.
 n) After you save the API key, click "Done".
 
 ----------------------------------------------------------------------------------------------------------------------------------
-6) Install WP Mail SMTP:
+8) Install WP Mail SMTP:
 
 root@digital-ocean-hostname:# cd /var/www/html
 
 root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp plugin install wp-mail-smtp --activate
 
 ----------------------------------------------------------------------------------------------------------------------------------
-7) Tell WP Mail SMTP to use SendGrid:
+9) Tell WP Mail SMTP to use SendGrid:
 
 root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp option update wp_mail_smtp --format=json <<'JSON'
 {
@@ -160,7 +163,7 @@ JSON
 (Important: Make sure the from_email value ends with your domain. Do not use your personal email here.)
 
 ----------------------------------------------------------------------------------------------------------------------------------
-8) Send a Test Email
+10) Send a Test Email
 
 root@digital-ocean-hostname:/var/www/html# sudo -u www-data wp eval '                                                   
 wp_mail(
@@ -175,7 +178,7 @@ Check your email to confirm the message was received.
 (If this fails, make sure the "from_email" value from the previous step ends with your domain.)
 
 ----------------------------------------------------------------------------------------------------------------------------------
-8) Set up 2FA for the "target" user
+11) Set up 2FA for the "target" user
 
 a) Log out and log back into Wordpress.
 
@@ -190,7 +193,7 @@ e) Click "Finish Setup".
 f) Click "miniOrange 2-Factor" in the menu sidebar to verify how many emails you have left.
 
 ----------------------------------------------------------------------------------------------------------------------------------
-9) Transfer the recovery codes to your host using scp tool
+12) Transfer the recovery codes to your host using scp tool
 
 ┌──(kali㉿kali)-[~]
 └─$ sudo systemctl start ssh      
