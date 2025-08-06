@@ -77,7 +77,7 @@ auth-relay-framework
     │   │   │   └── wordpress-relay.py
     │   │   └── wordpress-relay.txt
     │   └── setup
-    │       ├── evil-portal-setup.txt
+    │       ├── evilportal-setup.txt
     │       ├── selenium-setup.txt
     │       └── web-root
     │           ├── helper.php
