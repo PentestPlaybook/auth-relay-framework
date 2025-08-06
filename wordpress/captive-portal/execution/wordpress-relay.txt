@@ -72,6 +72,8 @@ d) Enter the OTP code in the victim browser.
 
 e) You should be redirected to a page, indicating that internet access has been granted.
 
+(Note: If the credentials/OTP code do not transmit to the attack VM, ensure your SSH port forwards have not lost connection.)
+
 -------------------------------------------------------------------------------------------------------------
 6. Confirm Internet Access was Granted
 
