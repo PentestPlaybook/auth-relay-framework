@@ -41,6 +41,6 @@ Monitor the wordpress-relay.sh execution output to view intercepted credentials 
 
 Once the required login information is entered, Selenium will log the attacker's firefox browser into the victim's account.
 
-Upon successful login in attacker's browser, the victim's broswer is redirected to the target website.
+Upon successful login, on attacker's browser, the victim's broswer is redirected to the target website, to continue the login process.
 
-The target user loses access to the web application once they successfully enter their credentials/OTP code.
+The target loses access to the attacker's web application once they have successfully entered their credentials/OTP code.
