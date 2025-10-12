@@ -51,7 +51,7 @@ Is the information correct? [Y/n] y
 Would you like to use LetsEncrypt (certbot) to configure SSL(https) for your new site? (y/n): y
 
 Enter email address (used for urgent renewal and security notices)
- (Enter 'c' to cancel): (your personal email)
+ (Enter 'c' to cancel): your-real-email@gmail.com
 
 Please read the Terms of Service at
 https://letsencrypt.org/documents/LE-SA-v1.5-February-24-2025.pdf. You must
