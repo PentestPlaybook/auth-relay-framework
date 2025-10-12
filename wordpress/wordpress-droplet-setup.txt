@@ -129,7 +129,7 @@ c) Complete the registration process.
 d) Make sure to download your recovery code.
 
 ----------------------------------------------------------------------------------------------------------------------------------
-8) Configure your Sendgrid Account
+8) Configure DNS Records and Select your Email API Plan
 
 a) Sign into your account.
 (If prompted, click: "Create new account" and "Proceed with new account")
@@ -139,46 +139,48 @@ b) Enter your domain (the one you used when installing Wordpress) and click "nex
 c) Click "Setup Now" (under "Install DNS Records").
 
 d) Add the CNAME and TXT records with your DNS provider and then click "Next" in SendGrid.
+(If you get validation errors with the CNAME records, add only the subdomain part, before the @, for the host value) 
 
-e) Under "Select your Email API plan" and "Select your Marketing Campaigns plan", select "60 day trial."
-
-f) Under "Settings" click "API Keys" and "Create API Key".
-
-g) Name the API Key "Wordpress", Select "Full Access" and click "Create & View".
-
-h) Copy the API Key and save it somewhere safe.
-
-i) After you save the API key, click "Done".
+e) Under "Select your Email API plan" and "Select your Marketing Campaigns plan", select: "60 day trial" and click "Next".
 
 ----------------------------------------------------------------------------------------------------------------------------------
 9) Install WP Mail SMTP:
+
+a) At "https://app.sendgrid.com/" click "Settings", "API Keys" and "Create API Key".
+
+b) Name the API Key "Wordpress", Select "Full Access" and click "Create & View".
+
+c) Copy the API Key, save it somewhere safe, and click "Done".
+
+----------------------------------------------------------------------------------------------------------------------------------
+10) Install WP Mail SMTP:
 
 root@digital-ocean-hostname:# cd /var/www/html
 
 root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp plugin install wp-mail-smtp --activate
 
 ----------------------------------------------------------------------------------------------------------------------------------
-10) Tell WP Mail SMTP to use SendGrid:
+11) Tell WP Mail SMTP to use SendGrid:
 
 root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp option update wp_mail_smtp --format=json <<'JSON'
 {
   "mail": {
-    "from_email": "admin@your domain",
+    "from_email": "admin@your-domain.info",
     "from_name":  "WordPress",
     "mailer":     "sendgrid",
     "return_path": true
   },
   "sendgrid": {
-    "api_key": "your sendgrid api key"
+    "api_key": "SG.1234567890"
   }
 }
 JSON
 
 
-(Important: Make sure the from_email value ends with your domain. Do not use your personal email here.)
+(Make sure to replace the from_email value with your admin@your wordpress domain. Also replace the API Key value with your Sendgrid API Key.)
 
 ----------------------------------------------------------------------------------------------------------------------------------
-11) Send a Test Email
+12) Send a Test Email
 
 root@digital-ocean-hostname:/var/www/html# sudo -u www-data wp eval '                                                   
 wp_mail(
@@ -188,12 +190,12 @@ wp_mail(
 );
 '
 
+(Make sure to replace "your personal email" with the email address you're sending the email to.)
 
 Check your email to confirm the message was received.
-(If this fails, make sure the "from_email" value from the previous step ends with your domain.)
 
 ----------------------------------------------------------------------------------------------------------------------------------
-12) Set up 2FA for the "target" user
+13) Set up 2FA for the "target" user
 
 a) Log out and log back into Wordpress.
 
@@ -208,7 +210,7 @@ e) Click "Finish Setup".
 f) Click "miniOrange 2-Factor" in the menu sidebar to verify how many emails you have left.
 
 ----------------------------------------------------------------------------------------------------------------------------------
-13) Transfer the recovery codes to your host using scp tool
+14) Transfer the recovery codes to your host using scp tool
 
 ┌──(kali㉿kali)-[~]
 └─$ sudo systemctl start ssh      
