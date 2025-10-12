@@ -3,6 +3,7 @@
 IMPORTANT: Ensure your open wifi network is disabled (http://172.16.42.1:1471/#/PineAP/open) and your WPA network is enabled with a secret password (http://172.16.42.1:1471/#/PineAP/aps). 
 a) This will ensure that only you have access to this testing network. (Only allow access to others if contracted for an authorized phishing engagement and this activity is in-scope).
 b) You can also add your MAC address to the client allow list (http://172.16.42.1:1471/#/PineAP/filtering), to add another layer of security, blocking unauthorized access.
+
 -------------------------------------------------------------------------------------------------------------
 2). Install Evilportal on the WiFi Pineapple:
 a) Connect to the Admin Portal at 172.16.42.1:1471
