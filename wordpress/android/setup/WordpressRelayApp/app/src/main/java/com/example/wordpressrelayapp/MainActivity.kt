@@ -262,7 +262,7 @@ class MainActivity : AppCompatActivity() {
             }.start()
         }
         
-        // Button 3: Start X11, Selenium, Python (formerly Button 4)
+// Button 3: Start X11, Selenium, Python, and SSH Port Forwards (Combined)
         button3.setOnClickListener {
             // Show dialog to get WordPress domain from user
             val input = android.widget.EditText(this)
@@ -323,11 +323,12 @@ class MainActivity : AppCompatActivity() {
                                 pkill -9 -f geckodriver || true
                                 pkill -9 -f firefox || true
                                 pkill -9 -f termux-x11 || true
+                                pkill -f 'ssh.*172.16.42.1' || true
                         
                                 # Wait for ports to be released
                                 echo "Waiting for ports to be released..." >> cleanup.log
                                 for i in {1..10}; do
-                                    if ! netstat -tuln | grep -E "(6000|4444|8080)" > /dev/null 2>&1; then
+                                    if ! netstat -tuln | grep -E "(6000|4444|8080|9998)" > /dev/null 2>&1; then
                                         echo "All ports released after ${'$'}i seconds" >> cleanup.log
                                         break
                                     fi
@@ -426,6 +427,74 @@ class MainActivity : AppCompatActivity() {
                                 echo "X11: ${'$'}X11_PID (TCP port 6000)" >> x11_output.log
                                 echo "Geckodriver: ${'$'}GECKO_PID (port 4444)" >> x11_output.log
                                 echo "Python: ${'$'}PYTHON_PID (port 8080, domain: $domain)" >> x11_output.log
+
+                                # Wait for port 8080 to be ready before setting up SSH forwards
+                                echo "" >> x11_output.log
+                                echo "=== SSH Port Forward Setup ===" >> x11_output.log
+                                echo "Waiting for port 8080 to be ready..." >> x11_output.log
+                                echo 'Setting up port forwards...' > ssh_setup.log
+                                
+                                PORT_READY=0
+                                for i in {1..30}; do
+                                    if netstat -tuln | grep -q ':8080 '; then
+                                        echo "✓ Port 8080 is ready after ${'$'}i seconds" >> x11_output.log
+                                        echo "Port 8080 is ready after ${'$'}i seconds" >> ssh_setup.log
+                                        PORT_READY=1
+                                        break
+                                    fi
+                                    sleep 1
+                                done
+
+                                if [ "${'$'}PORT_READY" -eq 0 ]; then
+                                    echo 'ERROR: Port 8080 not ready after 30 seconds' >> x11_output.log
+                                    echo 'ERROR: Port 8080 not ready after 30 seconds' >> ssh_setup.log
+                                    echo 'Python relay may have failed to start' >> ssh_setup.log
+                                    exit 1
+                                fi
+
+                                # Kill any existing SSH tunnels
+                                echo "Cleaning up old SSH tunnels..." >> ssh_setup.log
+                                pkill -f 'ssh.*172.16.42.1' || true
+                                sleep 2
+
+                                # Set up SSH port forward 1: Pineapple:9999 → Android:8080
+                                echo "Setting up Forward 1: Pineapple:9999 → Android:8080" >> ssh_setup.log
+                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -N -R 9999:localhost:8080 root@172.16.42.1 > ssh_forward1.log 2>&1 &
+                                FORWARD1_PID=${'$'}!
+                                echo "Forward 1 PID: ${'$'}FORWARD1_PID" >> ssh_setup.log
+                                echo "Forward 1 started with PID: ${'$'}FORWARD1_PID" >> x11_output.log
+
+                                sleep 2
+
+                                # Set up SSH port forward 2: Android:9998 → Pineapple:80
+                                echo "Setting up Forward 2: Android:9998 → Pineapple:80" >> ssh_setup.log
+                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -N -L 9998:172.16.42.1:80 root@172.16.42.1 > ssh_forward2.log 2>&1 &
+                                FORWARD2_PID=${'$'}!
+                                echo "Forward 2 PID: ${'$'}FORWARD2_PID" >> ssh_setup.log
+                                echo "Forward 2 started with PID: ${'$'}FORWARD2_PID" >> x11_output.log
+
+                                sleep 2
+
+                                # Verify SSH tunnels are running
+                                echo '' >> ssh_setup.log
+                                echo '=== SSH Tunnel Status ===' >> ssh_setup.log
+                                ps aux | grep 'ssh.*172.16.42.1' | grep -v grep >> ssh_setup.log || echo 'No SSH tunnels found' >> ssh_setup.log
+
+                                echo '' >> ssh_setup.log
+                                echo '=== Port Status ===' >> ssh_setup.log
+                                netstat -tuln | grep -E '(8080|9998)' >> ssh_setup.log || echo 'Ports not listening yet' >> ssh_setup.log
+
+                                echo 'SSH setup complete!' >> ssh_setup.log
+                                echo "✓ SSH port forwards configured" >> x11_output.log
+                                
+                                echo "" >> x11_output.log
+                                echo "=== COMPLETE SETUP SUMMARY ===" >> x11_output.log
+                                echo "All services started and SSH tunnels established" >> x11_output.log
+                                echo "X11 PID: ${'$'}X11_PID" >> x11_output.log
+                                echo "Geckodriver PID: ${'$'}GECKO_PID" >> x11_output.log
+                                echo "Python PID: ${'$'}PYTHON_PID" >> x11_output.log
+                                echo "SSH Forward 1 PID: ${'$'}FORWARD1_PID" >> x11_output.log
+                                echo "SSH Forward 2 PID: ${'$'}FORWARD2_PID" >> x11_output.log
                             """.trimIndent()
 
                             // 1) Write the script to /sdcard using root
@@ -476,22 +545,101 @@ class MainActivity : AppCompatActivity() {
                             val stderr = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
                             val exit = proc.waitFor()
 
+                            // Wait for all processes to initialize including SSH
+                            Thread.sleep(5000)
+
+                            // Read all logs using the same method - write script and pipe it
+                            val readLogsScript = mutableListOf<String>()
+                            readLogsScript.add("#!/data/data/com.termux/files/usr/bin/bash")
+                            readLogsScript.add("set -e")
+                            readLogsScript.add("")
+                            readLogsScript.add("export HOME=/data/data/com.termux/files/home")
+                            readLogsScript.add("export PREFIX=/data/data/com.termux/files/usr")
+                            readLogsScript.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
+                            readLogsScript.add("")
+                            readLogsScript.add("cd \"\$HOME\"")
+                            readLogsScript.add("")
+                            readLogsScript.add("echo '=== X11_OUTPUT_LOG ==='")
+                            readLogsScript.add("cat x11_output.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("echo ''")
+                            readLogsScript.add("echo '=== CLEANUP_LOG ==='")
+                            readLogsScript.add("cat cleanup.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("echo ''")
+                            readLogsScript.add("echo '=== ENV_CHECK_LOG ==='")
+                            readLogsScript.add("cat env_check.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("echo ''")
+                            readLogsScript.add("echo '=== GECKODRIVER_LOG ==='")
+                            readLogsScript.add("tail -20 geckodriver.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("echo ''")
+                            readLogsScript.add("echo '=== PYTHON_OUTPUT_LOG ==='")
+                            readLogsScript.add("tail -20 python_output.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("echo ''")
+                            readLogsScript.add("echo '=== SSH_SETUP_LOG ==='")
+                            readLogsScript.add("cat ssh_setup.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("echo ''")
+                            readLogsScript.add("echo '=== SSH_FORWARD1_LOG ==='")
+                            readLogsScript.add("cat ssh_forward1.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("echo ''")
+                            readLogsScript.add("echo '=== SSH_FORWARD2_LOG ==='")
+                            readLogsScript.add("cat ssh_forward2.log 2>/dev/null || echo 'File not found'")
+
+                            val readLogsScriptContent = readLogsScript.joinToString("\n")
+                            val readLogsScriptPath = "/sdcard/read_logs.sh"
+                            writeFileAsRoot(readLogsScriptPath, readLogsScriptContent)
+                            execAsRoot("chmod 644 $readLogsScriptPath")
+
+                            val readPipeline = "cat $readLogsScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
+                            val readProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
+                            val allLogs = BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
+                            readProc.waitFor()
+
+                            // Parse out each log from the combined output
+                            val x11LogContent = allLogs.substringAfter("=== X11_OUTPUT_LOG ===")
+                                .substringBefore("=== CLEANUP_LOG ===").trim()
+                            val cleanupLogContent = allLogs.substringAfter("=== CLEANUP_LOG ===")
+                                .substringBefore("=== ENV_CHECK_LOG ===").trim()
+                            val envCheckLogContent = allLogs.substringAfter("=== ENV_CHECK_LOG ===")
+                                .substringBefore("=== GECKODRIVER_LOG ===").trim()
+                            val geckodriverLogContent = allLogs.substringAfter("=== GECKODRIVER_LOG ===")
+                                .substringBefore("=== PYTHON_OUTPUT_LOG ===").trim()
+                            val pythonLogContent = allLogs.substringAfter("=== PYTHON_OUTPUT_LOG ===")
+                                .substringBefore("=== SSH_SETUP_LOG ===").trim()
+                            val sshSetupLogContent = allLogs.substringAfter("=== SSH_SETUP_LOG ===")
+                                .substringBefore("=== SSH_FORWARD1_LOG ===").trim()
+                            val sshForward1LogContent = allLogs.substringAfter("=== SSH_FORWARD1_LOG ===")
+                                .substringBefore("=== SSH_FORWARD2_LOG ===").trim()
+                            val sshForward2LogContent = allLogs.substringAfter("=== SSH_FORWARD2_LOG ===").trim()
+
                             runOnUiThread {
                                 textView.text = buildString {
+                                    appendLine("✅ Complete Setup Finished")
                                     appendLine("Script piped to Termux bash (uid $TERMUX_UID).")
                                     appendLine("Domain: $domain")
                                     appendLine("Exit: $exit")
                                     if (stdout.isNotBlank()) appendLine("\n--- STDOUT ---\n$stdout")
                                     if (stderr.isNotBlank()) appendLine("\n--- STDERR ---\n$stderr")
                                     appendLine("\nUsing TCP connection: DISPLAY=localhost:0")
-                                    appendLine("\nCheck logs in $TERMUX_HOME:")
-                                    appendLine("- cleanup.log (process cleanup)")
-                                    appendLine("- x11_output.log (TCP port 6000)")
-                                    appendLine("- firefox_test.log")
-                                    appendLine("- env_check.log (netstat output)")
-                                    appendLine("- geckodriver.log")
-                                    appendLine("- python_output.log")
-                                    appendLine("\nNow press Button 4 to set up SSH tunnels!")
+                                    appendLine("\n=== X11 & Service Logs ===")
+                                    appendLine(x11LogContent)
+                                    appendLine("\n=== Cleanup Log ===")
+                                    appendLine(cleanupLogContent)
+                                    appendLine("\n=== Environment Check ===")
+                                    appendLine(envCheckLogContent)
+                                    appendLine("\n=== Geckodriver Log (last 20 lines) ===")
+                                    appendLine(geckodriverLogContent)
+                                    appendLine("\n=== Python Output (last 20 lines) ===")
+                                    appendLine(pythonLogContent)
+                                    appendLine("\n=== SSH Port Forward Setup ===")
+                                    appendLine("Forward 1: Pineapple:9999 → Android:8080 (Credentials IN)")
+                                    appendLine("Forward 2: Android:9998 → Pineapple:80 (Results OUT)")
+                                    appendLine("\n=== ssh_setup.log ===")
+                                    appendLine(sshSetupLogContent)
+                                    appendLine("\n=== ssh_forward1.log ===")
+                                    appendLine(sshForward1LogContent)
+                                    appendLine("\n=== ssh_forward2.log ===")
+                                    appendLine(sshForward2LogContent)
+                                    appendLine("\nAll logs available in $TERMUX_HOME")
+                                    appendLine("Setup complete - all services and SSH tunnels running!")
                                 }.trim()
                             }
                         } catch (e: Exception) {
@@ -508,158 +656,53 @@ class MainActivity : AppCompatActivity() {
         }
 
         button4.setOnClickListener {
-            textView.text = "Setting up SSH port forwards..."
+            textView.text = "Running 'id' command in Termux..."
 
             Thread {
                 try {
-                    try {
-                        val killProc = Runtime.getRuntime().exec(arrayOf(
-                            "su", TERMUX_UID, "-c",
-                            "pkill -f 'ssh.*172.16.42.1' || true"
-                        ))
-                        killProc.waitFor()
-                    } catch (e: Exception) {
-                        // Ignore
-                    }
-                    Thread.sleep(1000)
+                    val idLines = mutableListOf<String>()
+                    idLines.add("#!/data/data/com.termux/files/usr/bin/bash")
+                    idLines.add("set -e")
+                    idLines.add("")
+                    idLines.add("export HOME=/data/data/com.termux/files/home")
+                    idLines.add("export PREFIX=/data/data/com.termux/files/usr")
+                    idLines.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
+                    idLines.add("")
+                    idLines.add("cd \"\$HOME\"")
+                    idLines.add("")
+                    idLines.add("id")
                     
-                    val sshLines = mutableListOf<String>()
-                    sshLines.add("#!/data/data/com.termux/files/usr/bin/bash")
-                    sshLines.add("set -e")
-                    sshLines.add("")
-                    sshLines.add("export HOME=/data/data/com.termux/files/home")
-                    sshLines.add("export PREFIX=/data/data/com.termux/files/usr")
-                    sshLines.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
-                    sshLines.add("")
-                    sshLines.add("cd \"\$HOME\"")
-                    sshLines.add("")
-                    sshLines.add("echo 'Setting up port forwards...' > ssh_setup.log")
-                    sshLines.add("")
-                    sshLines.add("pkill -f 'ssh.*172.16.42.1' || true")
-                    sshLines.add("sleep 2")
-                    sshLines.add("")
-                    sshLines.add("echo 'Waiting for port 8080 to be ready...' >> ssh_setup.log")
-                    sshLines.add("PORT_READY=0")
-                    sshLines.add("for i in {1..30}; do")
-                    sshLines.add("    if netstat -tuln | grep -q ':8080 '; then")
-                    sshLines.add("        echo \"Port 8080 is ready after \$i seconds\" >> ssh_setup.log")
-                    sshLines.add("        PORT_READY=1")
-                    sshLines.add("        break")
-                    sshLines.add("    fi")
-                    sshLines.add("    sleep 1")
-                    sshLines.add("done")
-                    sshLines.add("")
-                    sshLines.add("if [ \"\$PORT_READY\" -eq 0 ]; then")
-                    sshLines.add("    echo 'ERROR: Port 8080 not ready after 30 seconds' >> ssh_setup.log")
-                    sshLines.add("    echo 'Make sure you pressed Button 3 first!' >> ssh_setup.log")
-                    sshLines.add("    exit 1")
-                    sshLines.add("fi")
-                    sshLines.add("")
-                    sshLines.add("nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -N -R 9999:localhost:8080 root@172.16.42.1 > ssh_forward1.log 2>&1 &")
-                    sshLines.add("FORWARD1_PID=\$!")
-                    sshLines.add("echo \"Forward 1 PID: \$FORWARD1_PID\" >> ssh_setup.log")
-                    sshLines.add("")
-                    sshLines.add("sleep 2")
-                    sshLines.add("")
-                    sshLines.add("nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -N -L 9998:172.16.42.1:80 root@172.16.42.1 > ssh_forward2.log 2>&1 &")
-                    sshLines.add("FORWARD2_PID=\$!")
-                    sshLines.add("echo \"Forward 2 PID: \$FORWARD2_PID\" >> ssh_setup.log")
-                    sshLines.add("")
-                    sshLines.add("sleep 2")
-                    sshLines.add("")
-                    sshLines.add("echo '' >> ssh_setup.log")
-                    sshLines.add("echo '=== SSH Tunnel Status ===' >> ssh_setup.log")
-                    sshLines.add("ps aux | grep 'ssh.*172.16.42.1' | grep -v grep >> ssh_setup.log || echo 'No SSH tunnels found' >> ssh_setup.log")
-                    sshLines.add("")
-                    sshLines.add("echo '' >> ssh_setup.log")
-                    sshLines.add("echo '=== Port Status ===' >> ssh_setup.log")
-                    sshLines.add("netstat -tuln | grep -E '(8080|9998)' >> ssh_setup.log || echo 'Ports not listening yet' >> ssh_setup.log")
-                    sshLines.add("")
-                    sshLines.add("echo 'Setup complete!' >> ssh_setup.log")
+                    val idScript = idLines.joinToString("\n")
+                    val idScriptPath = "/sdcard/id_check.sh"
+                    writeFileAsRoot(idScriptPath, idScript)
+                    execAsRoot("chmod 644 $idScriptPath")
                     
-                    val sshScript = sshLines.joinToString("\n")
-                    val sshScriptPath = "/sdcard/ssh_setup.sh"
-                    writeFileAsRoot(sshScriptPath, sshScript)
-                    execAsRoot("chmod 644 $sshScriptPath")
-                    
-                    val pipeline = "cat $sshScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
+                    val pipeline = "cat $idScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
                     val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
                     
                     val stdout = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
                     val stderr = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
                     val exit = proc.waitFor()
                     
-                    Thread.sleep(3000)
-                    
-                    // Read logs using SAME method as Button 3 - write script and pipe it
-                    val readLogsScript = mutableListOf<String>()
-                    readLogsScript.add("#!/data/data/com.termux/files/usr/bin/bash")
-                    readLogsScript.add("set -e")
-                    readLogsScript.add("")
-                    readLogsScript.add("export HOME=/data/data/com.termux/files/home")
-                    readLogsScript.add("export PREFIX=/data/data/com.termux/files/usr")
-                    readLogsScript.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
-                    readLogsScript.add("")
-                    readLogsScript.add("cd \"\$HOME\"")
-                    readLogsScript.add("")
-                    readLogsScript.add("echo '=== SSH_SETUP_LOG ==='")
-                    readLogsScript.add("cat ssh_setup.log 2>/dev/null || echo 'File not found'")
-                    readLogsScript.add("echo '=== SSH_FORWARD1_LOG ==='")
-                    readLogsScript.add("cat ssh_forward1.log 2>/dev/null || echo 'File not found'")
-                    readLogsScript.add("echo '=== SSH_FORWARD2_LOG ==='")
-                    readLogsScript.add("cat ssh_forward2.log 2>/dev/null || echo 'File not found'")
-                    
-                    val readLogsScriptContent = readLogsScript.joinToString("\n")
-                    val readLogsScriptPath = "/sdcard/read_logs.sh"
-                    writeFileAsRoot(readLogsScriptPath, readLogsScriptContent)
-                    execAsRoot("chmod 644 $readLogsScriptPath")
-                    
-                    val readPipeline = "cat $readLogsScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
-                    val readProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
-                    val allLogs = BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
-                    readProc.waitFor()
-                    
-                    // Parse out each log from the combined output
-                    val setupLogContent = allLogs.substringAfter("=== SSH_SETUP_LOG ===")
-                        .substringBefore("=== SSH_FORWARD1_LOG ===").trim()
-                    val forward1LogContent = allLogs.substringAfter("=== SSH_FORWARD1_LOG ===")
-                        .substringBefore("=== SSH_FORWARD2_LOG ===").trim()
-                    val forward2LogContent = allLogs.substringAfter("=== SSH_FORWARD2_LOG ===").trim()
-                    
-                    val finalMessage = buildString {
-                        appendLine("✅ SSH Port Forward Setup Attempted")
-                        appendLine("")
-                        appendLine("Forward 1: Pineapple:9999 → Android:8080 (Credentials IN)")
-                        appendLine("Forward 2: Android:9998 → Pineapple:80 (Results OUT)")
-                        appendLine("")
-                        appendLine("=== ssh_setup.log ===")
-                        appendLine(setupLogContent)
-                        appendLine("")
-                        appendLine("=== ssh_forward1.log ===")
-                        appendLine(forward1LogContent)
-                        appendLine("")
-                        appendLine("=== ssh_forward2.log ===")
-                        appendLine(forward2LogContent)
-                        if (exit != 0) {
+                    runOnUiThread {
+                        textView.text = buildString {
+                            appendLine("=== ID Command Output ===")
+                            appendLine("Exit code: $exit")
                             appendLine("")
-                            appendLine("⚠️ Exit code: $exit")
                             if (stdout.isNotBlank()) {
-                                appendLine("")
-                                appendLine("Stdout: $stdout")
+                                appendLine("Output:")
+                                appendLine(stdout.trim())
                             }
                             if (stderr.isNotBlank()) {
                                 appendLine("")
-                                appendLine("Stderr: $stderr")
+                                appendLine("Error:")
+                                appendLine(stderr.trim())
                             }
-                        }
-                    }
-                    
-                    runOnUiThread {
-                        textView.text = finalMessage
+                        }.trim()
                     }
                     
                 } catch (e: Exception) {
-                    runOnUiThread { textView.text = "Error setting up SSH forwards: ${e.message}" }
+                    runOnUiThread { textView.text = "Error running id command: ${e.message}" }
                 }
             }.start()
         }
