@@ -12,28 +12,42 @@ import java.io.OutputStreamWriter
 
 class MainActivity : AppCompatActivity() {
 
-    // Your confirmed constants
-    private val TERMUX_UID = "10321"
     private val TERMUX_HOME = "/data/data/com.termux/files/home"
     private val TERMUX_BASH = "/data/data/com.termux/files/usr/bin/bash"
-    private val SD_SCRIPT = "/sdcard/x11_start.sh" // read via su -mm
+    private val SD_SCRIPT = "/sdcard/x11_start.sh"
+    
+    // Dynamic values to be populated
+    private var termuxUid: String = ""
+    private var termuxGid: String = ""
+    private var termuxGroups: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         val textView = findViewById<TextView>(R.id.textView)
-		textView.movementMethod = android.text.method.ScrollingMovementMethod()
+        textView.movementMethod = android.text.method.ScrollingMovementMethod()
         val button1 = findViewById<Button>(R.id.button1)
         val button2 = findViewById<Button>(R.id.button2)
         val button3 = findViewById<Button>(R.id.button3)
         val button4 = findViewById<Button>(R.id.button4)
+
+        // Detect Termux UID/GID on startup
+        detectTermuxIds()
 
         button1.setOnClickListener {
             textView.text = "Checking prerequisites..."
 
             Thread {
                 try {
+                    val (success, errorMsg) = ensureTermuxIdsDetected()
+                    if (!success) {
+                        runOnUiThread { 
+                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg" 
+                        }
+                        return@Thread
+                    }
+
                     val scriptLines = mutableListOf<String>()
                     scriptLines.add("#!/data/data/com.termux/files/usr/bin/bash")
                     scriptLines.add("set -e")
@@ -63,7 +77,7 @@ class MainActivity : AppCompatActivity() {
                     writeFileAsRoot(checkScriptPath, checkScript)
                     execAsRoot("chmod 644 $checkScriptPath")
                     
-                    val checkPipeline = "cat $checkScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
+                    val checkPipeline = "cat $checkScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
                     val checkProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", checkPipeline))
                     val checkOutput = BufferedReader(InputStreamReader(checkProc.inputStream)).use { it.readText() }
                     val checkError = BufferedReader(InputStreamReader(checkProc.errorStream)).use { it.readText() }
@@ -105,7 +119,7 @@ class MainActivity : AppCompatActivity() {
                         writeFileAsRoot(keygenScriptPath, keygenScript)
                         execAsRoot("chmod 644 $keygenScriptPath")
                         
-                        val keygenPipeline = "cat $keygenScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
+                        val keygenPipeline = "cat $keygenScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
                         val keygenProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", keygenPipeline))
                         val keygenOutput = BufferedReader(InputStreamReader(keygenProc.inputStream)).use { it.readText() }
                         val keygenError = BufferedReader(InputStreamReader(keygenProc.errorStream)).use { it.readText() }
@@ -149,7 +163,7 @@ class MainActivity : AppCompatActivity() {
                         writeFileAsRoot(downloadScriptPath, downloadScript)
                         execAsRoot("chmod 644 $downloadScriptPath")
                         
-                        val downloadPipeline = "cat $downloadScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
+                        val downloadPipeline = "cat $downloadScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
                         val downloadProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", downloadPipeline))
                         val downloadOutput = BufferedReader(InputStreamReader(downloadProc.inputStream)).use { it.readText() }
                         val downloadError = BufferedReader(InputStreamReader(downloadProc.errorStream)).use { it.readText() }
@@ -197,7 +211,15 @@ class MainActivity : AppCompatActivity() {
 
             Thread {
                 try {
-                    // 1) Launch Termux to initialize environment
+                    val (success, errorMsg) = ensureTermuxIdsDetected()
+                    if (!success) {
+                        runOnUiThread { 
+                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg" 
+                        }
+                        return@Thread
+                    }
+
+                    // Launch Termux to initialize environment
                     try {
                         val termuxLaunch = packageManager.getLaunchIntentForPackage("com.termux")
                             ?: Intent().apply {
@@ -206,16 +228,13 @@ class MainActivity : AppCompatActivity() {
                             }
                         startActivity(termuxLaunch)
                         
-                        // Wait for Termux to initialize
                         Thread.sleep(2000)
                         
-                        // Bring this app back to foreground
                         val returnIntent = Intent(this@MainActivity, MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                         }
                         startActivity(returnIntent)
                         
-                        // Give time for app to come back to foreground
                         Thread.sleep(500)
                         
                     } catch (_: ActivityNotFoundException) {
@@ -226,9 +245,8 @@ class MainActivity : AppCompatActivity() {
                         return@Thread
                     }
 
-                    // 2) Now perform the ping test
                     val proc = Runtime.getRuntime().exec(arrayOf(
-                        "su", TERMUX_UID, "-c",
+                        "su", termuxUid, "-c",
                         "ping -c 4 172.16.42.1"
                     ))
 
@@ -262,9 +280,7 @@ class MainActivity : AppCompatActivity() {
             }.start()
         }
         
-// Button 3: Start X11, Selenium, Python, and SSH Port Forwards (Combined)
         button3.setOnClickListener {
-            // Show dialog to get WordPress domain from user
             val input = android.widget.EditText(this)
             input.hint = "https://example.com"
             input.inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
@@ -288,11 +304,18 @@ class MainActivity : AppCompatActivity() {
                         return@setPositiveButton
                     }
             
-                    // Start the actual setup process with the provided domain
                     textView.text = "Creating script and launching…"
 
                     Thread {
                         try {
+                            val (success, errorMsg) = ensureTermuxIdsDetected()
+                            if (!success) {
+                                runOnUiThread { 
+                                    textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg" 
+                                }
+                                return@Thread
+                            }
+
                             val scriptContent = """
                                 #!$TERMUX_BASH
                                 set -e
@@ -497,11 +520,9 @@ class MainActivity : AppCompatActivity() {
                                 echo "SSH Forward 2 PID: ${'$'}FORWARD2_PID" >> x11_output.log
                             """.trimIndent()
 
-                            // 1) Write the script to /sdcard using root
                             writeFileAsRoot(SD_SCRIPT, scriptContent)
                             execAsRoot("chmod 644 $SD_SCRIPT")
 
-                            // 2) Start Termux app first to initialize the environment
                             try {
                                 val termuxLaunch = packageManager.getLaunchIntentForPackage("com.termux")
                                     ?: Intent().apply {
@@ -509,7 +530,7 @@ class MainActivity : AppCompatActivity() {
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     }
                                 startActivity(termuxLaunch)
-                                Thread.sleep(2000) // Give Termux time to initialize
+                                Thread.sleep(2000)
                             } catch (_: ActivityNotFoundException) {
                                 runOnUiThread { textView.text = "Termux not installed." }
                                 return@Thread
@@ -518,7 +539,6 @@ class MainActivity : AppCompatActivity() {
                                 return@Thread
                             }
 
-                            // 3) Launch Termux:X11 UI
                             try {
                                 val x11Launch = packageManager.getLaunchIntentForPackage("com.termux.x11")
                                     ?: Intent().apply {
@@ -534,21 +554,17 @@ class MainActivity : AppCompatActivity() {
                                 return@Thread
                             }
 
-                            // Give X11 app time to fully start
                             Thread.sleep(3000)
 
-                            // 4) Execute pipeline WITH GROUPS
-                            val pipeline = "cat $SD_SCRIPT | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
+                            val pipeline = "cat $SD_SCRIPT | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
                             val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
 
                             val stdout = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
                             val stderr = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
                             val exit = proc.waitFor()
 
-                            // Wait for all processes to initialize including SSH
                             Thread.sleep(5000)
 
-                            // Read all logs using the same method - write script and pipe it
                             val readLogsScript = mutableListOf<String>()
                             readLogsScript.add("#!/data/data/com.termux/files/usr/bin/bash")
                             readLogsScript.add("set -e")
@@ -588,12 +604,11 @@ class MainActivity : AppCompatActivity() {
                             writeFileAsRoot(readLogsScriptPath, readLogsScriptContent)
                             execAsRoot("chmod 644 $readLogsScriptPath")
 
-                            val readPipeline = "cat $readLogsScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
+                            val readPipeline = "cat $readLogsScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
                             val readProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
                             val allLogs = BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
                             readProc.waitFor()
 
-                            // Parse out each log from the combined output
                             val x11LogContent = allLogs.substringAfter("=== X11_OUTPUT_LOG ===")
                                 .substringBefore("=== CLEANUP_LOG ===").trim()
                             val cleanupLogContent = allLogs.substringAfter("=== CLEANUP_LOG ===")
@@ -613,7 +628,7 @@ class MainActivity : AppCompatActivity() {
                             runOnUiThread {
                                 textView.text = buildString {
                                     appendLine("✅ Complete Setup Finished")
-                                    appendLine("Script piped to Termux bash (uid $TERMUX_UID).")
+                                    appendLine("Script piped to Termux bash (uid $termuxUid).")
                                     appendLine("Domain: $domain")
                                     appendLine("Exit: $exit")
                                     if (stdout.isNotBlank()) appendLine("\n--- STDOUT ---\n$stdout")
@@ -656,59 +671,307 @@ class MainActivity : AppCompatActivity() {
         }
 
         button4.setOnClickListener {
-            textView.text = "Running 'id' command in Termux..."
+            textView.text = "Running diagnostics..."
 
             Thread {
                 try {
-                    val idLines = mutableListOf<String>()
-                    idLines.add("#!/data/data/com.termux/files/usr/bin/bash")
-                    idLines.add("set -e")
-                    idLines.add("")
-                    idLines.add("export HOME=/data/data/com.termux/files/home")
-                    idLines.add("export PREFIX=/data/data/com.termux/files/usr")
-                    idLines.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
-                    idLines.add("")
-                    idLines.add("cd \"\$HOME\"")
-                    idLines.add("")
-                    idLines.add("id")
+                    val diagnostics = StringBuilder()
+                    diagnostics.appendLine("=== TERMUX DETECTION DIAGNOSTICS ===\n")
                     
-                    val idScript = idLines.joinToString("\n")
-                    val idScriptPath = "/sdcard/id_check.sh"
-                    writeFileAsRoot(idScriptPath, idScript)
-                    execAsRoot("chmod 644 $idScriptPath")
+                    // Step 1: Check if Termux is installed (try multiple methods)
+                    diagnostics.appendLine("1. Checking if Termux is installed...")
                     
-                    val pipeline = "cat $idScriptPath | su $TERMUX_UID -g 3003 -G 9997 -G 20321 -G 50321 -c '$TERMUX_BASH'"
-                    val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
+                    // Method 1: getPackageInfo
+                    var termuxAppId: Int? = null
+                    try {
+                        val packageInfo = packageManager.getPackageInfo("com.termux", 0)
+                        termuxAppId = packageInfo.applicationInfo.uid
+                        diagnostics.appendLine("   ✅ Method 1 (getPackageInfo): Success")
+                        diagnostics.appendLine("   Package UID: $termuxAppId\n")
+                    } catch (e: Exception) {
+                        diagnostics.appendLine("   ❌ Method 1 (getPackageInfo): ${e.message}")
+                    }
                     
-                    val stdout = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-                    val stderr = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
-                    val exit = proc.waitFor()
+                    // Method 2: Check if Termux files exist via root
+                    if (termuxAppId == null) {
+                        diagnostics.appendLine("\n   Trying Method 2 (check filesystem)...")
+                        try {
+                            val checkProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "ls -ld /data/data/com.termux"))
+                            val checkOutput = BufferedReader(InputStreamReader(checkProc.inputStream)).use { it.readText() }
+                            val checkExit = checkProc.waitFor()
+                            
+                            if (checkExit == 0 && checkOutput.isNotBlank()) {
+                                diagnostics.appendLine("   ✅ Method 2: Termux directory exists")
+                                diagnostics.appendLine("   Output: ${checkOutput.trim()}")
+                                
+                                // Try to extract UID from ls -ld output
+                                // Format: drwx------ 10 u0_a321 u0_a321 4096 ...
+                                val uidMatch = Regex("""u0_a(\d+)""").find(checkOutput)
+                                if (uidMatch != null) {
+                                    val appNum = uidMatch.groupValues[1]
+                                    termuxAppId = 10000 + appNum.toInt()
+                                    diagnostics.appendLine("   ✅ Extracted UID from filesystem: $termuxAppId\n")
+                                }
+                            } else {
+                                diagnostics.appendLine("   ❌ Method 2: Directory not found or not accessible\n")
+                            }
+                        } catch (e: Exception) {
+                            diagnostics.appendLine("   ❌ Method 2: ${e.message}\n")
+                        }
+                    }
+                    
+                    // Method 3: Read from /data/system/packages.list
+                    if (termuxAppId == null) {
+                        diagnostics.appendLine("   Trying Method 3 (packages.list)...")
+                        try {
+                            val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
+                            val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
+                            val listExit = listProc.waitFor()
+                            
+                            if (listExit == 0 && listOutput.isNotBlank()) {
+                                diagnostics.appendLine("   ✅ Method 3: Found in packages.list")
+                                diagnostics.appendLine("   Output: ${listOutput.trim()}")
+                                
+                                // Format: com.termux 10321 0 /data/user/0/com.termux ...
+                                val parts = listOutput.trim().split("\\s+".toRegex())
+                                if (parts.size >= 2) {
+                                    termuxAppId = parts[1].toIntOrNull()
+                                    diagnostics.appendLine("   ✅ Extracted UID: $termuxAppId\n")
+                                }
+                            } else {
+                                diagnostics.appendLine("   ❌ Method 3: Not found in packages.list\n")
+                            }
+                        } catch (e: Exception) {
+                            diagnostics.appendLine("   ❌ Method 3: ${e.message}\n")
+                        }
+                    }
+                    
+                    if (termuxAppId == null) {
+                        diagnostics.appendLine("❌ TERMUX NOT DETECTED\n")
+                        diagnostics.appendLine("All detection methods failed. Is Termux really installed?")
+                        runOnUiThread { textView.text = diagnostics.toString() }
+                        return@Thread
+                    }
+                    
+                    // Step 2: Check root access
+                    diagnostics.appendLine("2. Checking root access...")
+                    try {
+                        val rootProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
+                        val rootOutput = BufferedReader(InputStreamReader(rootProc.inputStream)).use { it.readText() }
+                        val rootError = BufferedReader(InputStreamReader(rootProc.errorStream)).use { it.readText() }
+                        val rootExit = rootProc.waitFor()
+                        
+                        if (rootExit == 0) {
+                            diagnostics.appendLine("   ✅ Root access available")
+                            diagnostics.appendLine("   Root id: ${rootOutput.trim()}\n")
+                        } else {
+                            diagnostics.appendLine("   ❌ Root command failed (exit: $rootExit)")
+                            if (rootError.isNotBlank()) diagnostics.appendLine("   Error: $rootError\n")
+                            runOnUiThread { textView.text = diagnostics.toString() }
+                            return@Thread
+                        }
+                    } catch (e: Exception) {
+                        diagnostics.appendLine("   ❌ FAILED: ${e.message}\n")
+                        runOnUiThread { textView.text = diagnostics.toString() }
+                        return@Thread
+                    }
+                    
+                    // Step 3: Calculate standard Android groups
+                    diagnostics.appendLine("3. Calculating standard Android groups for UID $termuxAppId...")
+                    val appId = termuxAppId - 10000  // Extract app number (e.g., 10321 -> 321)
+                    
+                    diagnostics.appendLine("   App ID: $appId")
+                    diagnostics.appendLine("   Primary UID/GID: $termuxAppId")
+                    diagnostics.appendLine("   Supplementary groups:")
+                    diagnostics.appendLine("     - 3003 (inet - network access)")
+                    diagnostics.appendLine("     - 9997 (everybody)")
+                    diagnostics.appendLine("     - ${20000 + appId} (cache group)")
+                    diagnostics.appendLine("     - ${50000 + appId} (all group)")
+                    
+                    val calculatedGid = termuxAppId.toString()
+                    val supplementaryGroups = listOf(
+                        "3003",
+                        "9997",
+                        (20000 + appId).toString(),
+                        (50000 + appId).toString()
+                    )
+                    val calculatedGroups = supplementaryGroups.joinToString(" ") { "-G $it" }
+                    
+                    diagnostics.appendLine("\n   Formatted command line groups: $calculatedGroups\n")
+                    
+                    // Step 4: Verify by running 'id' command
+                    diagnostics.appendLine("4. Verifying by running 'id' as Termux UID...")
+                    try {
+                        val proc = Runtime.getRuntime().exec(arrayOf("su", termuxAppId.toString(), "-c", "id"))
+                        val output = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+                        val error = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
+                        val exitCode = proc.waitFor()
+                        
+                        diagnostics.appendLine("   Exit code: $exitCode")
+                        
+                        if (output.isNotBlank()) {
+                            diagnostics.appendLine("   Output: ${output.trim()}")
+                            
+                            // Parse actual groups to compare
+                            val groupsMatch = Regex("""groups=([^\s]+)""").find(output)
+                            if (groupsMatch != null) {
+                                val actualGroups = groupsMatch.groupValues[1]
+                                diagnostics.appendLine("\n   Actual groups from 'id': $actualGroups")
+                                
+                                // Check if our calculated groups match
+                                val allMatch = supplementaryGroups.all { actualGroups.contains(it) }
+                                if (allMatch) {
+                                    diagnostics.appendLine("   ✅ Calculated groups match actual groups!")
+                                } else {
+                                    diagnostics.appendLine("   ⚠️ Some calculated groups differ from actual")
+                                }
+                            }
+                        } else {
+                            diagnostics.appendLine("   Output: (empty)")
+                        }
+                        
+                        if (error.isNotBlank()) {
+                            diagnostics.appendLine("   Error: ${error.trim()}")
+                        }
+                        
+                        diagnostics.appendLine()
+                        
+                        if (exitCode == 0) {
+                            diagnostics.appendLine("✅ ALL CHECKS PASSED!")
+                            diagnostics.appendLine("\n=== VALUES THAT WILL BE USED ===")
+                            diagnostics.appendLine("UID: $termuxAppId")
+                            diagnostics.appendLine("GID: $calculatedGid")
+                            diagnostics.appendLine("Groups: ${supplementaryGroups.joinToString(", ")}")
+                            diagnostics.appendLine("Command format: su $termuxAppId -g $calculatedGid $calculatedGroups -c 'command'")
+                            diagnostics.appendLine("\n✅ These values will be used by Buttons 1-3")
+                        } else {
+                            diagnostics.appendLine("❌ 'id' command failed, but calculated values should still work")
+                        }
+                        
+                    } catch (e: Exception) {
+                        diagnostics.appendLine("   ❌ Exception: ${e.message}")
+                        diagnostics.appendLine("   Stack trace:")
+                        diagnostics.appendLine(e.stackTraceToString())
+                    }
                     
                     runOnUiThread {
-                        textView.text = buildString {
-                            appendLine("=== ID Command Output ===")
-                            appendLine("Exit code: $exit")
-                            appendLine("")
-                            if (stdout.isNotBlank()) {
-                                appendLine("Output:")
-                                appendLine(stdout.trim())
-                            }
-                            if (stderr.isNotBlank()) {
-                                appendLine("")
-                                appendLine("Error:")
-                                appendLine(stderr.trim())
-                            }
-                        }.trim()
+                        textView.text = diagnostics.toString()
                     }
                     
                 } catch (e: Exception) {
-                    runOnUiThread { textView.text = "Error running id command: ${e.message}" }
+                    runOnUiThread { textView.text = "Error running diagnostics: ${e.message}\n${e.stackTraceToString()}" }
                 }
             }.start()
         }
     }
 
-    /** Stream content to root: cat > <path> (no heredocs) */
+    /**
+     * Detects Termux UID, GID, and groups by reading packages.list
+     * and calculating standard Android supplementary groups.
+     */
+    private fun detectTermuxIds() {
+        Thread {
+            try {
+                // Get Termux UID from packages.list
+                val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
+                val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
+                val listExit = listProc.waitFor()
+                
+                if (listExit != 0 || listOutput.isBlank()) {
+                    return@Thread
+                }
+                
+                // Format: com.termux 10321 0 /data/user/0/com.termux ...
+                val parts = listOutput.trim().split("\\s+".toRegex())
+                if (parts.size < 2) {
+                    return@Thread
+                }
+                
+                val termuxAppId = parts[1].toIntOrNull() ?: return@Thread
+                
+                termuxUid = termuxAppId.toString()
+                termuxGid = termuxAppId.toString()
+                
+                // Calculate standard Android supplementary groups
+                // 3003 = inet (network access)
+                // 9997 = everybody
+                // 20000 + app_id = cache group
+                // 50000 + app_id = all group
+                val appId = termuxAppId - 10000  // Extract app number (e.g., 10321 -> 321)
+                val supplementaryGroups = listOf(
+                    "3003",           // inet - network access
+                    "9997",           // everybody
+                    (20000 + appId).toString(),  // cache group (e.g., 20321)
+                    (50000 + appId).toString()   // all group (e.g., 50321)
+                )
+                
+                termuxGroups = supplementaryGroups.joinToString(" ") { "-G $it" }
+            } catch (e: Exception) {
+                // Silent failure - will be caught later when trying to use these values
+            }
+        }.start()
+    }
+
+    /**
+     * Ensures Termux IDs are detected. If not, attempts detection synchronously.
+     * Returns a pair: (success: Boolean, errorMessage: String?)
+     */
+    private fun ensureTermuxIdsDetected(): Pair<Boolean, String?> {
+        if (termuxUid.isNotEmpty() && termuxGid.isNotEmpty() && termuxGroups.isNotEmpty()) {
+            return Pair(true, null)
+        }
+        
+        try {
+            // Get Termux UID from packages.list
+            val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
+            val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
+            val listError = BufferedReader(InputStreamReader(listProc.errorStream)).use { it.readText() }
+            val listExit = listProc.waitFor()
+            
+            if (listExit != 0) {
+                return Pair(false, "Failed to read packages.list (exit: $listExit)\nError: $listError")
+            }
+            
+            if (listOutput.isBlank()) {
+                return Pair(false, "Termux not found in packages.list. Is Termux installed?")
+            }
+            
+            // Format: com.termux 10321 0 /data/user/0/com.termux ...
+            val parts = listOutput.trim().split("\\s+".toRegex())
+            if (parts.size < 2) {
+                return Pair(false, "Invalid format in packages.list:\n$listOutput")
+            }
+            
+            val termuxAppId = parts[1].toIntOrNull()
+            if (termuxAppId == null) {
+                return Pair(false, "Could not parse UID from packages.list:\n$listOutput")
+            }
+            
+            termuxUid = termuxAppId.toString()
+            termuxGid = termuxAppId.toString()
+            
+            // Calculate standard Android supplementary groups
+            // 3003 = inet (network access)
+            // 9997 = everybody
+            // 20000 + app_id = cache group
+            // 50000 + app_id = all group
+            val appId = termuxAppId - 10000  // Extract app number (e.g., 10321 -> 321)
+            val supplementaryGroups = listOf(
+                "3003",           // inet - network access
+                "9997",           // everybody
+                (20000 + appId).toString(),  // cache group (e.g., 20321)
+                (50000 + appId).toString()   // all group (e.g., 50321)
+            )
+            
+            termuxGroups = supplementaryGroups.joinToString(" ") { "-G $it" }
+            
+            return Pair(true, null)
+            
+        } catch (e: Exception) {
+            return Pair(false, "Exception during detection: ${e.message}\n${e.stackTraceToString()}")
+        }
+    }
+
     private fun writeFileAsRoot(path: String, content: String) {
         val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", "cat > '$path'"))
         OutputStreamWriter(proc.outputStream).use { writer ->
@@ -723,7 +986,6 @@ class MainActivity : AppCompatActivity() {
         if (code != 0) throw RuntimeException("writeFileAsRoot failed ($code)\n$stderr\n$stdout")
     }
 
-    /** Run a root command and throw if non-zero */
     private fun execAsRoot(cmd: String) {
         val p = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", cmd))
         val err = BufferedReader(InputStreamReader(p.errorStream)).use { it.readText() }
@@ -732,7 +994,6 @@ class MainActivity : AppCompatActivity() {
         if (code != 0) throw RuntimeException("su -mm -c failed ($code)\n$err\n$out")
     }
 
-    /** Buttons 1–2 helper */
     private fun executeCommand(command: String, textView: TextView) {
         Thread {
             try {
