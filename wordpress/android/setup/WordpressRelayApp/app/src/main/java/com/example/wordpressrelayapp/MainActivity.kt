@@ -416,7 +416,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // =========================
-        // BUTTON 4 - USES nc FOR PORT CHECKING
+        // BUTTON 4
         // =========================
         button4.setOnClickListener {
             textView.text = "Loading last URL..."
@@ -467,26 +467,50 @@ class MainActivity : AppCompatActivity() {
                             textView.text = "No previous URL found. Enter a new one."
                         }
 
-                        android.app.AlertDialog.Builder(this@MainActivity)
+                        // Create dialog with null button listeners initially
+                        val dialog = android.app.AlertDialog.Builder(this@MainActivity)
                             .setTitle("Enter WordPress Domain")
                             .setMessage("Enter the full WordPress domain URL:")
                             .setView(input)
-                            .setPositiveButton("Start") { dialog, _ ->
+                            .setPositiveButton("Start", null)
+                            .setNegativeButton("Cancel", null)
+                            .setNeutralButton("Clear", null)
+                            .create()
+
+                        // Override button behavior after dialog is shown
+                        dialog.setOnShowListener {
+                            val startButton = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
+                            val cancelButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
+                            val clearButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
+
+                            // Clear button - just clears text, doesn't close dialog
+                            clearButton.setOnClickListener {
+                                input.setText("")
+                            }
+
+                            // Cancel button - closes dialog
+                            cancelButton.setOnClickListener {
+                                dialog.dismiss()
+                            }
+
+                            // Start button - validates and proceeds
+                            startButton.setOnClickListener {
                                 val domain = input.text.toString().trim()
 
                                 if (domain.isEmpty()) {
                                     textView.text = "❌ Domain cannot be empty"
                                     dialog.dismiss()
-                                    return@setPositiveButton
+                                    return@setOnClickListener
                                 }
 
                                 if (!domain.startsWith("http://") && !domain.startsWith("https://")) {
                                     textView.text = "❌ Domain must start with http:// or https://"
                                     dialog.dismiss()
-                                    return@setPositiveButton
+                                    return@setOnClickListener
                                 }
 
                                 textView.text = "Saving URL and creating script…"
+                                dialog.dismiss()
 
                                 Thread {
                                     try {
@@ -984,13 +1008,10 @@ class MainActivity : AppCompatActivity() {
                                         runOnUiThread { textView.text = "Error: ${e.message}\n${e.stackTraceToString()}" }
                                     }
                                 }.start()
+                            }
+                        }
 
-                                dialog.dismiss()
-                            }
-                            .setNegativeButton("Cancel") { dialog, _ ->
-                                dialog.cancel()
-                            }
-                            .show()
+                        dialog.show()
                     }
 
                 } catch (e: Exception) {
@@ -1135,7 +1156,8 @@ class MainActivity : AppCompatActivity() {
                 val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
                 val output =
                     BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
-                val errorOutput = BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
+                val errorOutput =
+                    BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
                 val code = process.waitFor()
                 runOnUiThread {
                     textView.text = when {
