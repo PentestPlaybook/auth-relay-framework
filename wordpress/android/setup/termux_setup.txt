@@ -1,0 +1,24 @@
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------ SSH Key Authentication ------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+1. Generate an SSH key pair in termux:
+~ $ ssh-keygen
+Generating public/private ed25519 key pair.
+Enter file in which to save the key (/data/data/com.termux/files/home/.ssh/id_ed25519): pineapple
+
+2. Set the permissions for the SSH private key:
+~ $ chmod 400 .ssh/pineapple
+
+3. Copy the SSH public key to host:
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> .\adb devices
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> .\adb forward tcp:8022 tcp:8022
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp -P 8022 u0_a321@localhost:/data/data/com.termux/files/home/.ssh/pineapple.pub .
+
+4. Copy the SSH public key to pineapple:
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp pineapple.pub root@172.16.42.1:/root/
+
+5. Append the SSH public key to the .ssh/authorized_keys file on the pineapple:
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> ssh root@172.16.42.1
+root@mk7:~# cat pineapple.pub >> .ssh/authorized_keys
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
