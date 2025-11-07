@@ -339,7 +339,7 @@ root@mk7:~/portals/Wordpress# nginx -s reload
 2025/10/12 11:56:35 [error] 10694#0: invalid PID number "" in "/var/run/nginx.pid"
 
 -------------------------------------------------------------------------------------------------------------
-15. Start and Enable the Captive Portal in the UI
+15. Reboot the Pineapple and Enable the Evil Portal on Boot
 
 a) The web portal should be ACTIVATED. (Refresh the Evil Portal module page to confirm.)
 
@@ -351,5 +351,6 @@ c) Click "Preview" and confirm the login page is rendered correctly
 
 d) Click "Start"
 (This will create the "Allowed Clients" allow list: /tmp/EVILPORTAL_CLIENTS.txt)
+
 e) Click "Enable on boot"
-(This will ensure the allow list is cleared following a reboot. Otherwise the client will maintain persistent access.)
+(This will ensure the allow list is cleared following a reboot. Otherwise the client will maintain persistent internet access.)
