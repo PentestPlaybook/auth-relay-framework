@@ -7,28 +7,23 @@ b) You can also add your client MAC address to the client allow list (http://172
 -------------------------------------------------------------------------------------------------------------
 2). Install Evilportal on the WiFi Pineapple:
 a) Connect to the Admin Portal at 172.16.42.1:1471
-
-b) Connect to Internet
-    i.) Ethernet Connection: Automatic, if an ethernet cable is connected to the wifi pineapple using a USB adapter.
+b) Connect to the Internet
+    i.) Ethernet Connection: Automatic, if an ethernet cable is connected to the wifi pineapple (using a USB adapter).
     ii.) WiFi Connection: (Settings > Networking > select the Client Mode Interface (under Wireless Client Mode) > click Scan  > select your AP > enter the Network Password > Click "Connect")
+c) Optional: Perform an internet speed test to measure bandwidth (download/upload speeds). (You can do this by connecting a client to the pineapple and visiting https://www.speedtest.net/)
+d) Click on "Modules & Packages" in the sidebar (the puzzle piece icon).
+e) Click the "Modules" tab.
+f) Click "Get Available Modules" (you may need to click it several times if you have a weak internet connection).
+g) Click "Install" next to the EvilPortal module.
+h) Click "Install" (you may need to click it several times if you have a weak internet connection).
+i) Click "Done" once the "Module Installed Successfully".
+j) Click the "Installed" tab.
+k) Click the "Pin" icon (to pin EvilPortal to the side bar).
+l) Click the EvilPortal icon in the side bar. 
+m) Wait for this screen: "Welcome to Evil Portal. Lets get started. You need to install some dependencies before you can use this module. This will make a request to the internet." (If you don't see this screen, do not proceed.)
+n) Click "Install Dependencies". (Wait until the dependencies are installed. You can open up a new tab to confirm that the process is finished.)
 
-c) Optional: Perform an internet speed test to measure bandwidth (download/upload speeds). 
-(You can do this by connecting a client to the pineapple.)
-
-d) Click on "Modules & Packages" in the sidebar.
-e) Click the "Modules" tab
-f) Click "Get Available Modules" (you may have to click it several times)
-g) Click "Install" next to the EvilPortal module
-h) Click "Install" (you may have to click it several times)
-i) Click the "Installed" tab
-j) Click the "Pin" icon to pin EvilPortal to the Sidebar.
-k) Click on EvilPortal in the sidebar. 
-l) Make sure you see this screen: "Welcome to Evil Portal. Lets get started. You need to install some dependencies before you can use this module. This will make a request to the internet." 
-(If you don't see this screen, do not proceed, or you will get "403 Forbidden nginx/1.19.6", when previewing the portal.)
-m) Click "Install Dependencies".
-(Wait until the dependencies are installed. You can open up a new tab to confirm that the process is finished.)
-
-* The web server will start automatically at the next boot/startup
+* The web server will automatically start at next boot/startup
 
 -------------------------------------------------------------------------------------------------------------
 3. Create a New Captive Portal
@@ -37,13 +32,12 @@ a) Click "New Portal", ensure "Basic Portal" is selected, and click "Next.
 
 b) Enter "Wordpress" as the portal name and click "Done".
 
-(Note: You do not need to click "Activate". The captive portal will be activated automatically during the setup process.) 
+(Note: You do not need to click "Activate". The captive portal will be activated later, during the setup process.) 
 
 -------------------------------------------------------------------------------------------------------------
 4. Delete the default EvilPortal configuration files from the EvilPortal source directory:
 
-a) Open the Terminal (in the top-right corner of the admin portal)
-(Note: If you don’t see a prompt, click inside the shell window and press Enter to refresh it.)
+a) Open the Terminal (in the top-right corner of the admin portal). (If you don’t see a prompt, click inside the shell and press Enter to refresh it.)
 
 b) Confirm the Default Files were created
 
@@ -67,6 +61,7 @@ PS C:\Users\user\> wsl -d kali-linux
 ┃ ⇒ https://www.kali.org/docs/troubleshooting/common-minimum-setup/
 ┃
 ┗━(Run: “touch ~/.hushlogin” to hide this message)
+
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ git clone https://github.com/PentestPlaybook/auth-relay-framework.git
@@ -259,7 +254,7 @@ root@mk7:~# find /root/portals/Wordpress/ | sed 's|[^/]*/|  |g'
 -------------------------------------------------------------------------------------------------------------
 12. Deploy Portal and Confirm Activation
 
-a) Create symbolic links for the Evil Portal files
+a) Create symbolic links for the Evil Portal web root files
 
 root@mk7:~/portals/Wordpress# cd /www
 
@@ -289,12 +284,8 @@ lrwxrwxrwx    1 root     root          35 Aug  4 21:40 wp-includes -> /root/port
 lrwxrwxrwx    1 root     root          36 Aug  4 21:40 wp-login.css -> /root/portals/Wordpress/wp-login.css
 lrwxrwxrwx    1 root     root          37 Aug  4 21:40 wp-scripts.js -> /root/portals/Wordpress/wp-scripts.js
 
-b) Refresh the EvilPortal module page to confirm the portal is now activated
-
-c) Click "Preview" to confirm the login page is loaded correctly
-Troubleshooting:
-- If you get a "403 Forbidden nginx/1.19.6" error, make sure you have installed the dependencies for Evil Portal
-- If the preview page is not formatted correctly, make sure the static Wordpress format files are not corrupted
+b) Refresh the EvilPortal module page to confirm the portal is now activated 
+(You won't be able to preview the portal until the web server is started.)
 
 -------------------------------------------------------------------------------------------------------------
 13. Backup Current Nginx Config
@@ -357,19 +348,24 @@ nginx: configuration file /etc/nginx/nginx.conf test is successful
 
 root@mk7:~/portals/Wordpress# nginx -s reload
 2025/10/12 11:56:35 [notice] 10694#0: signal process started
-
-(Note: The below error is harmless. If you get it, you likely have a weak WiFi connection.)
-2025/10/12 11:56:35 [error] 10694#0: invalid PID number "" in "/var/run/nginx.pid"
+2025/10/12 11:56:35 [error] 10694#0: invalid PID number "" in "/var/run/nginx.pid" (this means the web server hasn't been started)
 
 -------------------------------------------------------------------------------------------------------------
-17. Reboot the Pineapple and Enable the Evil Portal on Boot
+17. Reboot the Pineapple and Enable Evil Portal on Boot
 
 a) Reboot the pineapple
 
-b) Confirm the web server is started
+b) Return to the Evil Portal module page (http://172.16.42.1:1471/#/Modules/evilportal)
 
-c) Click "Start"
-(This will create the "Allowed Clients" allow list: /tmp/EVILPORTAL_CLIENTS.txt)
+c) Confirm the Web Server is started
 
-d) Click "Enable on boot"
-(This will ensure the allow list is cleared following a reboot. Otherwise the client will maintain persistent internet access.)
+d) Click "Preview" (to confirm the login page loaded correctly)
+Troubleshooting:
+- If you get a "403 Forbidden nginx/1.19.6" error, make sure you have installed the dependencies for Evil Portal
+- If the preview page is not formatted correctly, make sure the static Wordpress format files are not corrupted
+
+e) Click "Start"
+(This will create the /tmp/EVILPORTAL_CLIENTS.txt) (the "Allowed Clients" list)
+
+f) Click "Enable on boot"
+(This will ensure the "Allowed Clients" list is cleared following a reboot.) (Otherwise connected clients will maintain persistent internet access.)
