@@ -1,33 +1,84 @@
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------- SSH Key Authentication ------------------------------------------------------------------------------
+------------------------------------------------------------------------------ Connecting to Termux --------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-1. Generate an SSH key pair in termux:
-~ $ ssh-keygen
-Generating public/private ed25519 key pair.
-Enter file in which to save the key (/data/data/com.termux/files/home/.ssh/id_ed25519): pineapple
-(No passphrase for the key)
+1. Connect your android device to your host and enable USB debugging
 
-2. Set the permissions for the SSH private key:
-~ $ chmod 400 .ssh/pineapple
+a) Use a USB-C cable that is capable of data transfer
 
-3. Copy the SSH public key to host:
+b) Click "Allow Debugging" on your android
+
+c) Confirm your PC recognizes your android
+
 PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> .\adb devices
+List of devices attached
+A1B3C7D2E5F9G8  device
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. Start sshd in Termux
+
+~ $ sshd
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. Set up an SSH port forward from your host to Termux
+
 PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> .\adb forward tcp:8022 tcp:8022
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp -P 8022 u0_a321@localhost:/data/data/com.termux/files/home/.ssh/pineapple.pub .
+8022
 
-4. Copy the SSH public key to pineapple:
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp pineapple.pub root@172.16.42.1:/root/
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. SSH connect to Termux (from your host)
 
-5. Append the SSH public key to the .ssh/authorized_keys file on the pineapple:
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> ssh root@172.16.42.1
-root@mk7:~# cat pineapple.pub >> .ssh/authorized_keys
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> ssh -p 8022 u0_a321@localhost
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------- wordpress-relay.py --------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-1. Download wordpress-relay.py to the termux home directory:
 
-~ $ pwd
-/data/data/com.termux/files/home
+1. Download wordpress-relay.py to the Termux home directory
 
-~ $ wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/android/execution/scripts/wordpress-relay.py -O wordpress-relay.py
+~ $ wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/android/execution/scripts/wordpress-relay.py -O /data/data/com.termux/files/home/wordpress-relay.py
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------ SSH Key Authentication ------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+1. Change directory to ~/.ssh
+
+~ $ cd .ssh
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2. Create a SSH key pair in Termux
+
+~/.ssh $ ssh-keygen
+Generating public/private ed25519 key pair.
+Enter file in which to save the key (/data/data/com.termux/files/home/.ssh/id_ed25519): pineapple
+(Do not enter a passphrase for the key)
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3. Set the permissions for the SSH private key
+
+~/.ssh $ chmod 400 pineapple
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+4. Exit Termux
+
+~/.ssh $ exit
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+5. Transfer the SSH public key to your host
+
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp -P 8022 u0_a321@localhost:/data/data/com.termux/files/home/.ssh/pineapple.pub .
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+6. Transfer the SSH public key to the pineapple
+
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp pineapple.pub root@172.16.42.1:/root/
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+7. SSH into the Pineapple
+
+PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> ssh root@172.16.42.1
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+8. Append the SSH public key to .ssh/authorized_keys
+
+root@mk7:~# cat pineapple.pub >> .ssh/authorized_keys
