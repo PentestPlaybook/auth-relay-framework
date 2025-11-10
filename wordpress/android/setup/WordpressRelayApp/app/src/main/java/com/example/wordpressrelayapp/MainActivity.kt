@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity() {
 
         val textView = findViewById<TextView>(R.id.textView)
         textView.movementMethod = ScrollingMovementMethod()
+
         val button1 = findViewById<Button>(R.id.button1)
         val button2 = findViewById<Button>(R.id.button2)
         val button3 = findViewById<Button>(R.id.button3)
@@ -42,7 +43,6 @@ class MainActivity : AppCompatActivity() {
 
         button1.setOnClickListener {
             textView.text = "Checking Termux installation..."
-
             Thread {
                 try {
                     val diagnostics = StringBuilder()
@@ -52,10 +52,8 @@ class MainActivity : AppCompatActivity() {
                     diagnostics.appendLine("1. Checking root access...")
                     try {
                         val rootProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-                        val rootOutput =
-                            BufferedReader(InputStreamReader(rootProc.inputStream)).use { it.readText() }
-                        val rootError =
-                            BufferedReader(InputStreamReader(rootProc.errorStream)).use { it.readText() }
+                        val rootOutput = BufferedReader(InputStreamReader(rootProc.inputStream)).use { it.readText() }
+                        val rootError = BufferedReader(InputStreamReader(rootProc.errorStream)).use { it.readText() }
                         val rootExit = rootProc.waitFor()
 
                         if (rootExit == 0) {
@@ -78,8 +76,7 @@ class MainActivity : AppCompatActivity() {
                     try {
                         val listProc = Runtime.getRuntime()
                             .exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
-                        val listOutput =
-                            BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
+                        val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
                         val listExit = listProc.waitFor()
 
                         if (listExit != 0 || listOutput.isBlank()) {
@@ -108,8 +105,7 @@ class MainActivity : AppCompatActivity() {
                         // Step 3: Check packages.list for Termux:X11
                         val x11Proc = Runtime.getRuntime()
                             .exec(arrayOf("su", "-c", "grep com.termux.x11 /data/system/packages.list"))
-                        val x11Output =
-                            BufferedReader(InputStreamReader(x11Proc.inputStream)).use { it.readText() }
+                        val x11Output = BufferedReader(InputStreamReader(x11Proc.inputStream)).use { it.readText() }
                         val x11Exit = x11Proc.waitFor()
 
                         if (x11Exit != 0 || x11Output.isBlank()) {
@@ -122,9 +118,7 @@ class MainActivity : AppCompatActivity() {
 
                         // Step 4: Calculate standard Android groups
                         diagnostics.appendLine("4. Calculating standard Android groups...")
-
-                        val appId = termuxAppId - 10000  // Extract app number (e.g., 10321 -> 321)
-
+                        val appId = termuxAppId - 10000 // Extract app number (e.g., 10321 -> 321)
                         diagnostics.appendLine("   Termux UID: $termuxAppId")
                         diagnostics.appendLine("   App ID: $appId")
                         diagnostics.appendLine("   Primary GID: $termuxAppId")
@@ -133,7 +127,6 @@ class MainActivity : AppCompatActivity() {
                         diagnostics.appendLine("     - 9997 (everybody)")
                         diagnostics.appendLine("     - ${20000 + appId} (cache group)")
                         diagnostics.appendLine("     - ${50000 + appId} (all group)")
-
                     } catch (e: Exception) {
                         diagnostics.appendLine("   ❌ Exception: ${e.message}")
                         diagnostics.appendLine("\nStack trace:")
@@ -143,7 +136,6 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         textView.text = diagnostics.toString()
                     }
-
                 } catch (e: Exception) {
                     runOnUiThread {
                         textView.text = "Error: ${e.message}\n${e.stackTraceToString()}"
@@ -153,6 +145,85 @@ class MainActivity : AppCompatActivity() {
         }
 
         button2.setOnClickListener {
+            textView.text = "Launching Termux and testing connection..."
+
+            Thread {
+                try {
+                    val (success, errorMsg) = ensureTermuxIdsDetected()
+                    if (!success) {
+                        runOnUiThread {
+                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg"
+                        }
+                        return@Thread
+                    }
+
+                    // Launch Termux to initialize environment
+                    try {
+                        val termuxLaunch = packageManager.getLaunchIntentForPackage("com.termux")
+                            ?: Intent().apply {
+                                setClassName("com.termux", "com.termux.app.TermuxActivity")
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                        startActivity(termuxLaunch)
+
+                        Thread.sleep(2000)
+
+                        val returnIntent = Intent(this@MainActivity, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        }
+                        startActivity(returnIntent)
+
+                        Thread.sleep(500)
+
+                    } catch (_: ActivityNotFoundException) {
+                        runOnUiThread { textView.text = "❌ Termux not installed." }
+                        return@Thread
+                    } catch (e: Exception) {
+                        runOnUiThread { textView.text = "❌ Unable to launch Termux: ${e.message}" }
+                        return@Thread
+                    }
+
+                    // Added timeout to ping command (15 seconds max)
+                    val proc = Runtime.getRuntime().exec(
+                        arrayOf(
+                            "su", termuxUid, "-c",
+                            "timeout 15 ping -c 4 172.16.42.1"
+                        )
+                    )
+
+                    val output =
+                        BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+                    val error =
+                        BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
+                    val exitCode = proc.waitFor()
+
+                    runOnUiThread {
+                        textView.text = buildString {
+                            appendLine("=== Ping 172.16.42.1 (WiFi Pineapple) ===")
+                            appendLine("Exit: $exitCode")
+                            appendLine("")
+                            if (output.isNotBlank()) {
+                                appendLine(output.trim())
+                            }
+                            if (error.isNotBlank()) {
+                                appendLine("\n=== ERROR ===")
+                                appendLine(error.trim())
+                            }
+                            appendLine("")
+                            when (exitCode) {
+                                0 -> appendLine("✅ Pineapple is reachable!")
+                                124 -> appendLine("❌ Connection timed out after 15 seconds")
+                                else -> appendLine("❌ Pineapple is NOT reachable")
+                            }
+                        }.trim()
+                    }
+                } catch (e: Exception) {
+                    runOnUiThread { textView.text = "Error: ${e.message}" }
+                }
+            }.start()
+        }
+
+        button3.setOnClickListener {
             textView.text = "Checking prerequisites..."
 
             Thread {
@@ -207,16 +278,14 @@ class MainActivity : AppCompatActivity() {
                     val sshKeyExists = checkOutput.contains("SSH_KEY:EXISTS")
                     val pythonScriptExists = checkOutput.contains("SCRIPT:EXISTS")
 
-                    if (sshKeyExists && pythonScriptExists) {
-                        runOnUiThread {
-                            textView.text =
-                                "✅ Private SSH Key and Relay Script Exist in Current Directory\n\nReady to proceed!"
-                        }
-                        return@Thread
-                    }
-
                     val statusMessage = StringBuilder()
-                    statusMessage.appendLine("=== Setting Up Prerequisites ===\n")
+
+                    if (sshKeyExists && pythonScriptExists) {
+                        statusMessage.appendLine("✅ Private SSH Key and Relay Script Exist in Current Directory")
+                        statusMessage.appendLine("Proceeding to host key verification…")
+                    } else {
+                        statusMessage.appendLine("=== Setting Up Prerequisites ===\n")
+                    }
 
                     var needToTransferKey = false
 
@@ -310,20 +379,156 @@ class MainActivity : AppCompatActivity() {
                         statusMessage.appendLine("✅ Python script already exists\n")
                     }
 
+                    // ==== SSH host key verification & repair flow ====
+                    run {
+                        val hostCheckLines = mutableListOf<String>()
+                        hostCheckLines.add("#!/data/data/com.termux/files/usr/bin/bash")
+                        hostCheckLines.add("set +e")  // Don't exit on error
+                        hostCheckLines.add("")
+                        hostCheckLines.add("export HOME=/data/data/com.termux/files/home")
+                        hostCheckLines.add("export PREFIX=/data/data/com.termux/files/usr")
+                        hostCheckLines.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
+                        hostCheckLines.add("")
+                        hostCheckLines.add("cd \"${'$'}HOME\"")
+                        hostCheckLines.add("")
+                        hostCheckLines.add("HOST=172.16.42.1")
+                        hostCheckLines.add("ERR1=ssh_err_1.txt")
+                        hostCheckLines.add("ERR2=ssh_err_2.txt")
+                        hostCheckLines.add("ERR3=ssh_err_3.txt")
+                        hostCheckLines.add("rm -f \"${'$'}ERR1\" \"${'$'}ERR2\" \"${'$'}ERR3\"")
+                        hostCheckLines.add("")
+                        hostCheckLines.add("echo 'HOSTCHECK:START'")
+                        hostCheckLines.add("")
+                        hostCheckLines.add("# Try strict host key check (non-interactive)")
+                        hostCheckLines.add("status1=0")
+                        hostCheckLines.add("ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@${'$'}HOST true 2>\"${'$'}ERR1\" || status1=${'$'}?")
+                        hostCheckLines.add("")
+                        hostCheckLines.add("if [ ${'$'}status1 -eq 0 ]; then")
+                        hostCheckLines.add("  echo 'HOSTKEY_FAILED:NO'")
+                        hostCheckLines.add("  echo 'HOSTKEY_REMOVED:NO'")
+                        hostCheckLines.add("  echo 'NEW_CONNECTION_OK:YES'")
+                        hostCheckLines.add("  echo 'HOSTCHECK:END'")
+                        hostCheckLines.add("  exit 0")
+                        hostCheckLines.add("fi")
+                        hostCheckLines.add("")
+                        hostCheckLines.add("# Check if it was a host key verification failure")
+                        hostCheckLines.add("if grep -qiE 'host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED' \"${'$'}ERR1\"; then")
+                        hostCheckLines.add("  echo 'HOSTKEY_FAILED:YES'")
+                        hostCheckLines.add("  # Remove old key only if known_hosts exists")
+                        hostCheckLines.add("  if [ -f \"${'$'}HOME/.ssh/known_hosts\" ]; then")
+                        hostCheckLines.add("    if ssh-keygen -R \"${'$'}HOST\" >/dev/null 2>&1; then")
+                        hostCheckLines.add("      echo 'HOSTKEY_REMOVED:YES'")
+                        hostCheckLines.add("    else")
+                        hostCheckLines.add("      echo 'HOSTKEY_REMOVED:NO'")
+                        hostCheckLines.add("    fi")
+                        hostCheckLines.add("  else")
+                        hostCheckLines.add("    echo 'HOSTKEY_REMOVED:NO'")
+                        hostCheckLines.add("  fi")
+                        hostCheckLines.add("  # Reconnect, auto-accept new host key non-interactive")
+                        hostCheckLines.add("  ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@${'$'}HOST true 2>\"${'$'}ERR2\" || true")
+                        hostCheckLines.add("  # Verify again with strict checking")
+                        hostCheckLines.add("  status3=0")
+                        hostCheckLines.add("  ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@${'$'}HOST true 2>\"${'$'}ERR3\" || status3=${'$'}?")
+                        hostCheckLines.add("  if [ ${'$'}status3 -eq 0 ]; then")
+                        hostCheckLines.add("    echo 'NEW_CONNECTION_OK:YES'")
+                        hostCheckLines.add("  else")
+                        hostCheckLines.add("    echo 'NEW_CONNECTION_OK:NO'")
+                        hostCheckLines.add("    echo 'E1:'; cat \"${'$'}ERR1\" 2>/dev/null | head -20 || true")
+                        hostCheckLines.add("    echo 'E2:'; cat \"${'$'}ERR2\" 2>/dev/null | head -20 || true")
+                        hostCheckLines.add("    echo 'E3:'; cat \"${'$'}ERR3\" 2>/dev/null | head -20 || true")
+                        hostCheckLines.add("  fi")
+                        hostCheckLines.add("else")
+                        hostCheckLines.add("  # Some other failure")
+                        hostCheckLines.add("  echo 'HOSTKEY_FAILED:NO'")
+                        hostCheckLines.add("  echo 'HOSTKEY_REMOVED:NO'")
+                        hostCheckLines.add("  echo 'NEW_CONNECTION_OK:NO'")
+                        hostCheckLines.add("  echo 'E1:'; cat \"${'$'}ERR1\" 2>/dev/null | head -20 || true")
+                        hostCheckLines.add("fi")
+                        hostCheckLines.add("")
+                        hostCheckLines.add("echo 'HOSTCHECK:END'")
+
+                        val hostCheckScript = hostCheckLines.joinToString("\n")
+                        val hostCheckScriptPath = "/sdcard/hostkey_check.sh"
+                        writeFileAsRoot(hostCheckScriptPath, hostCheckScript)
+                        execAsRoot("chmod 644 $hostCheckScriptPath")
+
+                        val hostCheckPipeline =
+                            "cat $hostCheckScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                        val hostCheckProc =
+                            Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", hostCheckPipeline))
+                        val hostCheckOut =
+                            BufferedReader(InputStreamReader(hostCheckProc.inputStream)).use { it.readText() }
+                        val hostCheckErr =
+                            BufferedReader(InputStreamReader(hostCheckProc.errorStream)).use { it.readText() }
+                        hostCheckProc.waitFor()
+
+                        // Parse the actual output flags
+                        val hostKeyFailed = hostCheckOut.contains("HOSTKEY_FAILED:YES")
+                        val hostKeyRemoved = hostCheckOut.contains("HOSTKEY_REMOVED:YES")
+                        val newConnectionOk = hostCheckOut.contains("NEW_CONNECTION_OK:YES")
+
+                        statusMessage.apply {
+                            appendLine("—".repeat(50))
+                            appendLine("🔑 SSH Host Key Verification")
+                            appendLine("")
+                            appendLine("1) Host key verification failed: ${if (hostKeyFailed) "YES" else "NO"}")
+                            appendLine("2) Ran ssh-keygen -R to delete old key: ${if (hostKeyRemoved) "YES" else "NO"}")
+                            appendLine("3) New connection successfully initiated: ${if (newConnectionOk) "YES" else "NO"}")
+                            appendLine("")
+                    
+                            when {
+                                !hostKeyFailed && newConnectionOk -> {
+                                    appendLine("✅ Host key verification succeeded (no action needed)")
+                                }
+                                hostKeyFailed && hostKeyRemoved && newConnectionOk -> {
+                                    appendLine("✅ Fixed host key issue: removed old key and accepted new key")
+                                }
+                                hostKeyFailed && !hostKeyRemoved && newConnectionOk -> {
+                                    appendLine("✅ Fixed host key issue: accepted new key (no old key to remove)")
+                                }
+                                hostKeyFailed && !newConnectionOk -> {
+                                    appendLine("❌ Host key issue detected but could not establish new connection")
+                                    if (hostCheckOut.contains("E1:")) {
+                                        appendLine("\nError details:")
+                                        val errorStart = hostCheckOut.indexOf("E1:")
+                                        val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
+                                        if (errorEnd > errorStart) {
+                                            appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                        }
+                                    }
+                                }
+                                !hostKeyFailed && !newConnectionOk -> {
+                                    appendLine("❌ SSH connection failed (not a host key issue)")
+                                    if (hostCheckOut.contains("E1:")) {
+                                        appendLine("\nError details:")
+                                        val errorStart = hostCheckOut.indexOf("E1:")
+                                        val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
+                                        if (errorEnd > errorStart) {
+                                            appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                        }
+                                    }
+                                }
+                                else -> {
+                                    appendLine("❌ Unexpected result")
+                                    appendLine("\nDebug output:")
+                                    appendLine(hostCheckOut)
+                                }
+                            }
+                    
+                            appendLine("—".repeat(50))
+                        }
+                    }
+
+                    // Key transfer guidance if the key was just created
                     if (needToTransferKey) {
+                        statusMessage.appendLine("\n")
                         statusMessage.appendLine("=".repeat(50))
                         statusMessage.appendLine("⚠️  IMPORTANT: SSH KEY TRANSFER REQUIRED")
                         statusMessage.appendLine("=".repeat(50))
                         statusMessage.appendLine("\nYou must transfer the public key to the Pineapple.")
                         statusMessage.appendLine("\nOpen Termux and run these commands:\n")
                         statusMessage.appendLine("scp ~/.ssh/pineapple.pub root@172.16.42.1:/root/.ssh/authorized_keys")
-                        statusMessage.appendLine("\nAfter completing these steps, press Button 1 again.")
-                    } else if (sshKeyExists && pythonScriptExists) {
-                        statusMessage.appendLine("\n✅ All prerequisites ready!")
-                        statusMessage.appendLine("You can now proceed with buttons 2, 3, and 4.")
-                    } else {
-                        statusMessage.appendLine("\n⚠️ Some prerequisites are missing or failed to setup.")
-                        statusMessage.appendLine("Please check the error messages above.")
+                        statusMessage.appendLine("\nAfter completing these steps, press Button 2 again.")
                     }
 
                     runOnUiThread {
@@ -332,85 +537,6 @@ class MainActivity : AppCompatActivity() {
 
                 } catch (e: Exception) {
                     runOnUiThread { textView.text = "Error: ${e.message}\n${e.stackTraceToString()}" }
-                }
-            }.start()
-        }
-
-        button3.setOnClickListener {
-            textView.text = "Launching Termux and testing connection..."
-
-            Thread {
-                try {
-                    val (success, errorMsg) = ensureTermuxIdsDetected()
-                    if (!success) {
-                        runOnUiThread {
-                            textView.text = "❌ Failed to detect Termux UID/GID\n\n$errorMsg"
-                        }
-                        return@Thread
-                    }
-
-                    // Launch Termux to initialize environment
-                    try {
-                        val termuxLaunch = packageManager.getLaunchIntentForPackage("com.termux")
-                            ?: Intent().apply {
-                                setClassName("com.termux", "com.termux.app.TermuxActivity")
-                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                            }
-                        startActivity(termuxLaunch)
-
-                        Thread.sleep(2000)
-
-                        val returnIntent = Intent(this@MainActivity, MainActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                        }
-                        startActivity(returnIntent)
-
-                        Thread.sleep(500)
-
-                    } catch (_: ActivityNotFoundException) {
-                        runOnUiThread { textView.text = "❌ Termux not installed." }
-                        return@Thread
-                    } catch (e: Exception) {
-                        runOnUiThread { textView.text = "❌ Unable to launch Termux: ${e.message}" }
-                        return@Thread
-                    }
-
-                    // Added timeout to ping command (15 seconds max)
-                    val proc = Runtime.getRuntime().exec(
-                        arrayOf(
-                            "su", termuxUid, "-c",
-                            "timeout 15 ping -c 4 172.16.42.1"
-                        )
-                    )
-
-                    val output =
-                        BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-                    val error =
-                        BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
-                    val exitCode = proc.waitFor()
-
-                    runOnUiThread {
-                        textView.text = buildString {
-                            appendLine("=== Ping 172.16.42.1 (WiFi Pineapple) ===")
-                            appendLine("Exit: $exitCode")
-                            appendLine("")
-                            if (output.isNotBlank()) {
-                                appendLine(output.trim())
-                            }
-                            if (error.isNotBlank()) {
-                                appendLine("\n=== ERROR ===")
-                                appendLine(error.trim())
-                            }
-                            appendLine("")
-                            when (exitCode) {
-                                0 -> appendLine("✅ Pineapple is reachable!")
-                                124 -> appendLine("❌ Connection timed out after 15 seconds")
-                                else -> appendLine("❌ Pineapple is NOT reachable")
-                            }
-                        }.trim()
-                    }
-                } catch (e: Exception) {
-                    runOnUiThread { textView.text = "Error: ${e.message}" }
                 }
             }.start()
         }
