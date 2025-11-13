@@ -384,6 +384,9 @@ class MainActivity : AppCompatActivity() {
                         statusMessage.appendLine("✅ Python script already exists\n")
                     }
 
+                    var sshpassAttempted = false
+                    var sshpassSuccess = false
+
                     // ==== SSH host key verification & repair flow ====
                     run {
                         val hostCheckLines = mutableListOf<String>()
@@ -488,63 +491,220 @@ class MainActivity : AppCompatActivity() {
                         val hostKeyRemoved = hostCheckOut.contains("HOSTKEY_REMOVED:YES")
                         val newConnectionOk = hostCheckOut.contains("NEW_CONNECTION_OK:YES")
 
+                        // If pubkey authentication failed, attempt automatic key transfer using sshpass
+                        if (pubkeyFailed && !newConnectionOk) {
+                            statusMessage.apply {
+                                appendLine("—".repeat(50))
+                                appendLine("🔑 SSH Host Key Verification")
+                                appendLine("")
+                                appendLine("1) Host key verification failed: ${if (hostKeyFailed) "YES" else "NO"}")
+                                appendLine("2) Pubkey authentication failed: YES")
+                                appendLine("3) Ran ssh-keygen -R to delete old key: ${if (hostKeyRemoved) "YES" else "NO"}")
+                                appendLine("4) New connection successfully initiated: NO")
+                                appendLine("")
+                                appendLine("⚙️ Attempting automatic key transfer using sshpass...")
+                            }
+
+                            sshpassAttempted = true
+
+                            // Build script to transfer key using sshpass
+                            val sshpassLines = mutableListOf<String>()
+                            sshpassLines.add("#!/data/data/com.termux/files/usr/bin/bash")
+                            sshpassLines.add("set +e")  // Don't exit on error
+                            sshpassLines.add("")
+                            sshpassLines.add("export HOME=/data/data/com.termux/files/home")
+                            sshpassLines.add("export PREFIX=/data/data/com.termux/files/usr")
+                            sshpassLines.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
+                            sshpassLines.add("")
+                            sshpassLines.add("cd \"${'$'}HOME\"")
+                            sshpassLines.add("")
+                            sshpassLines.add("echo 'SSHPASS:START'")
+                            sshpassLines.add("")
+                            sshpassLines.add("# Check if password.txt exists")
+                            sshpassLines.add("if [ ! -f password.txt ]; then")
+                            sshpassLines.add("  echo 'SSHPASS:NO_PASSWORD_FILE'")
+                            sshpassLines.add("  echo 'SSHPASS:END'")
+                            sshpassLines.add("  exit 1")
+                            sshpassLines.add("fi")
+                            sshpassLines.add("")
+                            sshpassLines.add("# Check if public key exists")
+                            sshpassLines.add("if [ ! -f .ssh/pineapple.pub ]; then")
+                            sshpassLines.add("  echo 'SSHPASS:NO_PUBLIC_KEY'")
+                            sshpassLines.add("  echo 'SSHPASS:END'")
+                            sshpassLines.add("  exit 1")
+                            sshpassLines.add("fi")
+                            sshpassLines.add("")
+                            sshpassLines.add("# Attempt to transfer key using sshpass")
+                            sshpassLines.add("sshpass -f password.txt ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@172.16.42.1 'cat >> /root/.ssh/authorized_keys' < .ssh/pineapple.pub 2>sshpass_error.txt")
+                            sshpassLines.add("SSHPASS_EXIT=${'$'}?")
+                            sshpassLines.add("")
+                            sshpassLines.add("if [ ${'$'}SSHPASS_EXIT -eq 0 ]; then")
+                            sshpassLines.add("  echo 'SSHPASS:SUCCESS'")
+                            sshpassLines.add("else")
+                            sshpassLines.add("  echo 'SSHPASS:FAILED'")
+                            sshpassLines.add("  echo 'SSHPASS_EXIT_CODE:'${'$'}SSHPASS_EXIT")
+                            sshpassLines.add("  if [ -f sshpass_error.txt ]; then")
+                            sshpassLines.add("    echo 'SSHPASS_ERROR:'")
+                            sshpassLines.add("    cat sshpass_error.txt")
+                            sshpassLines.add("  fi")
+                            sshpassLines.add("fi")
+                            sshpassLines.add("")
+                            sshpassLines.add("echo 'SSHPASS:END'")
+
+                            val sshpassScript = sshpassLines.joinToString("\n")
+                            val sshpassScriptPath = "/sdcard/sshpass_transfer.sh"
+                            writeFileAsRoot(sshpassScriptPath, sshpassScript)
+                            execAsRoot("chmod 644 $sshpassScriptPath")
+
+                            val sshpassPipeline =
+                                "cat $sshpassScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                            val sshpassProc =
+                                Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", sshpassPipeline))
+                            val sshpassOut =
+                                BufferedReader(InputStreamReader(sshpassProc.inputStream)).use { it.readText() }
+                            val sshpassErr =
+                                BufferedReader(InputStreamReader(sshpassProc.errorStream)).use { it.readText() }
+                            sshpassProc.waitFor()
+
+                            // Check if sshpass succeeded
+                            sshpassSuccess = sshpassOut.contains("SSHPASS:SUCCESS")
+                            val noPasswordFile = sshpassOut.contains("SSHPASS:NO_PASSWORD_FILE")
+                            val noPublicKey = sshpassOut.contains("SSHPASS:NO_PUBLIC_KEY")
+
+                            statusMessage.apply {
+                                appendLine("")
+                                when {
+                                    sshpassSuccess -> {
+                                        appendLine("✅ Automatic key transfer successful!")
+                                        appendLine("   Public key has been added to authorized_keys on the Pineapple")
+                                    }
+                                    noPasswordFile -> {
+                                        appendLine("❌ Automatic key transfer failed: password.txt not found")
+                                        appendLine("   Create ~/password.txt with the root password and try again")
+                                    }
+                                    noPublicKey -> {
+                                        appendLine("❌ Automatic key transfer failed: .ssh/pineapple.pub not found")
+                                    }
+                                    else -> {
+                                        appendLine("❌ Automatic key transfer failed")
+                                        if (sshpassOut.contains("SSHPASS_ERROR:")) {
+                                            val errorStart = sshpassOut.indexOf("SSHPASS_ERROR:")
+                                            val errorEnd = sshpassOut.indexOf("SSHPASS:END", errorStart)
+                                            if (errorEnd > errorStart) {
+                                                appendLine("   Error details:")
+                                                appendLine("   " + sshpassOut.substring(errorStart + 14, errorEnd).trim())
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // If sshpass succeeded, verify the connection now works
+                            if (sshpassSuccess) {
+                                statusMessage.appendLine("")
+                                statusMessage.appendLine("🔄 Verifying SSH connection after key transfer...")
+
+                                val verifyLines = mutableListOf<String>()
+                                verifyLines.add("#!/data/data/com.termux/files/usr/bin/bash")
+                                verifyLines.add("set +e")
+                                verifyLines.add("")
+                                verifyLines.add("export HOME=/data/data/com.termux/files/home")
+                                verifyLines.add("export PREFIX=/data/data/com.termux/files/usr")
+                                verifyLines.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
+                                verifyLines.add("")
+                                verifyLines.add("cd \"${'$'}HOME\"")
+                                verifyLines.add("")
+                                verifyLines.add("ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@172.16.42.1 true 2>/dev/null")
+                                verifyLines.add("if [ ${'$'}? -eq 0 ]; then")
+                                verifyLines.add("  echo 'VERIFY:SUCCESS'")
+                                verifyLines.add("else")
+                                verifyLines.add("  echo 'VERIFY:FAILED'")
+                                verifyLines.add("fi")
+
+                                val verifyScript = verifyLines.joinToString("\n")
+                                val verifyScriptPath = "/sdcard/verify_connection.sh"
+                                writeFileAsRoot(verifyScriptPath, verifyScript)
+                                execAsRoot("chmod 644 $verifyScriptPath")
+
+                                val verifyPipeline =
+                                    "cat $verifyScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                                val verifyProc =
+                                    Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", verifyPipeline))
+                                val verifyOut =
+                                    BufferedReader(InputStreamReader(verifyProc.inputStream)).use { it.readText() }
+                                verifyProc.waitFor()
+
+                                val verifySuccess = verifyOut.contains("VERIFY:SUCCESS")
+                                statusMessage.apply {
+                                    if (verifySuccess) {
+                                        appendLine("✅ SSH connection verified - pubkey authentication now working!")
+                                    } else {
+                                        appendLine("⚠️ SSH connection still failing after key transfer")
+                                        appendLine("   Manual troubleshooting may be required")
+                                    }
+                                }
+                            }
+                        }
+
                         statusMessage.apply {
-                            appendLine("—".repeat(50))
-                            appendLine("🔑 SSH Host Key Verification")
-                            appendLine("")
-                            appendLine("1) Host key verification failed: ${if (hostKeyFailed) "YES" else "NO"}")
-                            appendLine("2) Pubkey authentication failed: ${if (pubkeyFailed) "YES" else "NO"}")
-                            appendLine("3) Ran ssh-keygen -R to delete old key: ${if (hostKeyRemoved) "YES" else "NO"}")
-                            appendLine("4) New connection successfully initiated: ${if (newConnectionOk) "YES" else "NO"}")
-                            appendLine("")
-                    
-                            when {
-                                !hostKeyFailed && !pubkeyFailed && newConnectionOk -> {
-                                    appendLine("✅ Host key verification and pubkey authentication succeeded (no action needed)")
-                                }
-                                hostKeyFailed && hostKeyRemoved && newConnectionOk -> {
-                                    appendLine("✅ Fixed host key issue: removed old key and accepted new key")
-                                }
-                                hostKeyFailed && !hostKeyRemoved && newConnectionOk -> {
-                                    appendLine("✅ Fixed host key issue: accepted new key (no old key to remove)")
-                                }
-                                pubkeyFailed && !hostKeyFailed -> {
-                                    appendLine("❌ Pubkey authentication failed - key may not be authorized on server")
-                                    if (hostCheckOut.contains("E1:")) {
-                                        appendLine("\nError details:")
-                                        val errorStart = hostCheckOut.indexOf("E1:")
-                                        val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
-                                        if (errorEnd > errorStart) {
-                                            appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                            if (!sshpassAttempted) {
+                                appendLine("—".repeat(50))
+                                appendLine("🔑 SSH Host Key Verification")
+                                appendLine("")
+                                appendLine("1) Host key verification failed: ${if (hostKeyFailed) "YES" else "NO"}")
+                                appendLine("2) Pubkey authentication failed: ${if (pubkeyFailed) "YES" else "NO"}")
+                                appendLine("3) Ran ssh-keygen -R to delete old key: ${if (hostKeyRemoved) "YES" else "NO"}")
+                                appendLine("4) New connection successfully initiated: ${if (newConnectionOk) "YES" else "NO"}")
+                                appendLine("")
+                        
+                                when {
+                                    !hostKeyFailed && !pubkeyFailed && newConnectionOk -> {
+                                        appendLine("✅ Host key verification and pubkey authentication succeeded (no action needed)")
+                                    }
+                                    hostKeyFailed && hostKeyRemoved && newConnectionOk -> {
+                                        appendLine("✅ Fixed host key issue: removed old key and accepted new key")
+                                    }
+                                    hostKeyFailed && !hostKeyRemoved && newConnectionOk -> {
+                                        appendLine("✅ Fixed host key issue: accepted new key (no old key to remove)")
+                                    }
+                                    pubkeyFailed && !hostKeyFailed -> {
+                                        appendLine("❌ Pubkey authentication failed - key may not be authorized on server")
+                                        if (hostCheckOut.contains("E1:")) {
+                                            appendLine("\nError details:")
+                                            val errorStart = hostCheckOut.indexOf("E1:")
+                                            val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
+                                            if (errorEnd > errorStart) {
+                                                appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                            }
                                         }
                                     }
-                                }
-                                hostKeyFailed && !newConnectionOk -> {
-                                    appendLine("❌ Host key issue detected but could not establish new connection")
-                                    if (hostCheckOut.contains("E1:")) {
-                                        appendLine("\nError details:")
-                                        val errorStart = hostCheckOut.indexOf("E1:")
-                                        val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
-                                        if (errorEnd > errorStart) {
-                                            appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                    hostKeyFailed && !newConnectionOk -> {
+                                        appendLine("❌ Host key issue detected but could not establish new connection")
+                                        if (hostCheckOut.contains("E1:")) {
+                                            appendLine("\nError details:")
+                                            val errorStart = hostCheckOut.indexOf("E1:")
+                                            val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
+                                            if (errorEnd > errorStart) {
+                                                appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                            }
                                         }
                                     }
-                                }
-                                !hostKeyFailed && !pubkeyFailed && !newConnectionOk -> {
-                                    appendLine("❌ SSH connection failed (not a host key or pubkey issue)")
-                                    if (hostCheckOut.contains("E1:")) {
-                                        appendLine("\nError details:")
-                                        val errorStart = hostCheckOut.indexOf("E1:")
-                                        val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
-                                        if (errorEnd > errorStart) {
-                                            appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                    !hostKeyFailed && !pubkeyFailed && !newConnectionOk -> {
+                                        appendLine("❌ SSH connection failed (not a host key or pubkey issue)")
+                                        if (hostCheckOut.contains("E1:")) {
+                                            appendLine("\nError details:")
+                                            val errorStart = hostCheckOut.indexOf("E1:")
+                                            val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
+                                            if (errorEnd > errorStart) {
+                                                appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                            }
                                         }
                                     }
-                                }
-                                else -> {
-                                    appendLine("❌ Unexpected result")
-                                    appendLine("\nDebug output:")
-                                    appendLine(hostCheckOut)
+                                    else -> {
+                                        appendLine("❌ Unexpected result")
+                                        appendLine("\nDebug output:")
+                                        appendLine(hostCheckOut)
+                                    }
                                 }
                             }
                     
@@ -552,8 +712,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
-                    // Key transfer guidance if the key was just created
-                    if (needToTransferKey) {
+                    // Key transfer guidance - only show if key was just created AND sshpass wasn't successful
+                    if (needToTransferKey && (!sshpassAttempted || !sshpassSuccess)) {
                         statusMessage.appendLine("\n")
                         statusMessage.appendLine("=".repeat(50))
                         statusMessage.appendLine("⚠️  IMPORTANT: SSH KEY TRANSFER REQUIRED")
