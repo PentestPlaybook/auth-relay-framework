@@ -410,6 +410,7 @@ class MainActivity : AppCompatActivity() {
                         hostCheckLines.add("")
                         hostCheckLines.add("if [ ${'$'}status1 -eq 0 ]; then")
                         hostCheckLines.add("  echo 'HOSTKEY_FAILED:NO'")
+                        hostCheckLines.add("  echo 'PUBKEY_FAILED:NO'")
                         hostCheckLines.add("  echo 'HOSTKEY_REMOVED:NO'")
                         hostCheckLines.add("  echo 'NEW_CONNECTION_OK:YES'")
                         hostCheckLines.add("  echo 'HOSTCHECK:END'")
@@ -419,6 +420,12 @@ class MainActivity : AppCompatActivity() {
                         hostCheckLines.add("# Check if it was a host key verification failure")
                         hostCheckLines.add("if grep -qiE 'host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED' \"${'$'}ERR1\"; then")
                         hostCheckLines.add("  echo 'HOSTKEY_FAILED:YES'")
+                        hostCheckLines.add("  # Check if pubkey auth also failed")
+                        hostCheckLines.add("  if grep -qiE 'Permission denied.*publickey' \"${'$'}ERR1\"; then")
+                        hostCheckLines.add("    echo 'PUBKEY_FAILED:YES'")
+                        hostCheckLines.add("  else")
+                        hostCheckLines.add("    echo 'PUBKEY_FAILED:NO'")
+                        hostCheckLines.add("  fi")
                         hostCheckLines.add("  # Remove old key only if known_hosts exists")
                         hostCheckLines.add("  if [ -f \"${'$'}HOME/.ssh/known_hosts\" ]; then")
                         hostCheckLines.add("    if ssh-keygen -R \"${'$'}HOST\" >/dev/null 2>&1; then")
@@ -443,10 +450,18 @@ class MainActivity : AppCompatActivity() {
                         hostCheckLines.add("    echo 'E3:'; cat \"${'$'}ERR3\" 2>/dev/null | head -20 || true")
                         hostCheckLines.add("  fi")
                         hostCheckLines.add("else")
-                        hostCheckLines.add("  # Some other failure")
-                        hostCheckLines.add("  echo 'HOSTKEY_FAILED:NO'")
-                        hostCheckLines.add("  echo 'HOSTKEY_REMOVED:NO'")
-                        hostCheckLines.add("  echo 'NEW_CONNECTION_OK:NO'")
+                        hostCheckLines.add("  # Some other failure - check if it's pubkey auth failure")
+                        hostCheckLines.add("  if grep -qiE 'Permission denied.*publickey' \"${'$'}ERR1\"; then")
+                        hostCheckLines.add("    echo 'HOSTKEY_FAILED:NO'")
+                        hostCheckLines.add("    echo 'PUBKEY_FAILED:YES'")
+                        hostCheckLines.add("    echo 'HOSTKEY_REMOVED:NO'")
+                        hostCheckLines.add("    echo 'NEW_CONNECTION_OK:NO'")
+                        hostCheckLines.add("  else")
+                        hostCheckLines.add("    echo 'HOSTKEY_FAILED:NO'")
+                        hostCheckLines.add("    echo 'PUBKEY_FAILED:NO'")
+                        hostCheckLines.add("    echo 'HOSTKEY_REMOVED:NO'")
+                        hostCheckLines.add("    echo 'NEW_CONNECTION_OK:NO'")
+                        hostCheckLines.add("  fi")
                         hostCheckLines.add("  echo 'E1:'; cat \"${'$'}ERR1\" 2>/dev/null | head -20 || true")
                         hostCheckLines.add("fi")
                         hostCheckLines.add("")
@@ -469,6 +484,7 @@ class MainActivity : AppCompatActivity() {
 
                         // Parse the actual output flags
                         val hostKeyFailed = hostCheckOut.contains("HOSTKEY_FAILED:YES")
+                        val pubkeyFailed = hostCheckOut.contains("PUBKEY_FAILED:YES")
                         val hostKeyRemoved = hostCheckOut.contains("HOSTKEY_REMOVED:YES")
                         val newConnectionOk = hostCheckOut.contains("NEW_CONNECTION_OK:YES")
 
@@ -477,19 +493,31 @@ class MainActivity : AppCompatActivity() {
                             appendLine("🔑 SSH Host Key Verification")
                             appendLine("")
                             appendLine("1) Host key verification failed: ${if (hostKeyFailed) "YES" else "NO"}")
-                            appendLine("2) Ran ssh-keygen -R to delete old key: ${if (hostKeyRemoved) "YES" else "NO"}")
-                            appendLine("3) New connection successfully initiated: ${if (newConnectionOk) "YES" else "NO"}")
+                            appendLine("2) Pubkey authentication failed: ${if (pubkeyFailed) "YES" else "NO"}")
+                            appendLine("3) Ran ssh-keygen -R to delete old key: ${if (hostKeyRemoved) "YES" else "NO"}")
+                            appendLine("4) New connection successfully initiated: ${if (newConnectionOk) "YES" else "NO"}")
                             appendLine("")
                     
                             when {
-                                !hostKeyFailed && newConnectionOk -> {
-                                    appendLine("✅ Host key verification succeeded (no action needed)")
+                                !hostKeyFailed && !pubkeyFailed && newConnectionOk -> {
+                                    appendLine("✅ Host key verification and pubkey authentication succeeded (no action needed)")
                                 }
                                 hostKeyFailed && hostKeyRemoved && newConnectionOk -> {
                                     appendLine("✅ Fixed host key issue: removed old key and accepted new key")
                                 }
                                 hostKeyFailed && !hostKeyRemoved && newConnectionOk -> {
                                     appendLine("✅ Fixed host key issue: accepted new key (no old key to remove)")
+                                }
+                                pubkeyFailed && !hostKeyFailed -> {
+                                    appendLine("❌ Pubkey authentication failed - key may not be authorized on server")
+                                    if (hostCheckOut.contains("E1:")) {
+                                        appendLine("\nError details:")
+                                        val errorStart = hostCheckOut.indexOf("E1:")
+                                        val errorEnd = hostCheckOut.indexOf("HOSTCHECK:END", errorStart)
+                                        if (errorEnd > errorStart) {
+                                            appendLine(hostCheckOut.substring(errorStart, errorEnd).trim())
+                                        }
+                                    }
                                 }
                                 hostKeyFailed && !newConnectionOk -> {
                                     appendLine("❌ Host key issue detected but could not establish new connection")
@@ -502,8 +530,8 @@ class MainActivity : AppCompatActivity() {
                                         }
                                     }
                                 }
-                                !hostKeyFailed && !newConnectionOk -> {
-                                    appendLine("❌ SSH connection failed (not a host key issue)")
+                                !hostKeyFailed && !pubkeyFailed && !newConnectionOk -> {
+                                    appendLine("❌ SSH connection failed (not a host key or pubkey issue)")
                                     if (hostCheckOut.contains("E1:")) {
                                         appendLine("\nError details:")
                                         val errorStart = hostCheckOut.indexOf("E1:")
@@ -533,7 +561,7 @@ class MainActivity : AppCompatActivity() {
                         statusMessage.appendLine("\nYou must transfer the public key to the Pineapple.")
                         statusMessage.appendLine("\nOpen Termux and run these commands:\n")
                         statusMessage.appendLine("scp ~/.ssh/pineapple.pub root@172.16.42.1:/root/.ssh/authorized_keys")
-                        statusMessage.appendLine("\nAfter completing these steps, press Button 2 again.")
+                        statusMessage.appendLine("\nAfter completing these steps, press Button 3 again.")
                     }
 
                     runOnUiThread {
