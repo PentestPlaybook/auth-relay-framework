@@ -1,84 +1,50 @@
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------- Connecting to Termux --------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-1. Connect your android device to your host and enable USB debugging
+1. Enable SSH Access:
 
-a) Use a USB-C cable that is capable of data transfer
+pkg update
+pkg install openssh
+passwd
+sshd
+whoami
 
-b) Click "Allow Debugging" on your android
+------------------------------------------------------------------------------------------------------------------------------------
+2. Connect via SSH:
 
-c) Confirm your PC recognizes your android
+cd C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools
+.\adb forward tcp:8022 tcp:8022
+ssh -p 8022 u0_a377@localhost
 
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> .\adb devices
-List of devices attached
-A1B3C7D2E5F9G8  device
+------------------------------------------------------------------------------------------------------------------------------------
+3. Installations:
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-2. Start sshd in Termux
+pkg install vim
+pkg install wget
+pkg install libandroid-support
+pkg install libandroid-posix-semaphore
+pkg install x11-repo
+pkg install termux-x11-nightly
+pkg install geckodriver
+pkg install sshpass
 
-~ $ sshd
+------------------------------------------------------------------------------------------------------------------------------------
+4. File Permissions:
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-3. Set up an SSH port forward from your host to Termux
+su
+(Grant Termux Root Permissions in Magisk)
+chcon u:object_r:shell_exec:s0 /data/data/com.termux/files/usr/lib/libandroid-support.so
+chcon u:object_r:shell_exec:s0 /data/data/com.termux/files/usr/lib/libandroid-posix-semaphore.so
+chmod 644 /data/data/com.termux/files/usr/lib/*.so*
+chmod 755 /data/data/com.termux/files/usr/bin/*
 
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> .\adb forward tcp:8022 tcp:8022
-8022
+------------------------------------------------------------------------------------------------------------------------------------
+5. Directory Permissions/Ownership:
 
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-4. SSH connect to Termux (from your host)
-
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> ssh -p 8022 u0_a321@localhost
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------- wordpress-relay.py --------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-1. Download wordpress-relay.py to the Termux home directory
-
-~ $ wget https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/android/execution/scripts/wordpress-relay.py -O /data/data/com.termux/files/home/wordpress-relay.py
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------- SSH Key Authentication ------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-1. Change directory to ~/.ssh
-
-~ $ cd .ssh
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-2. Create a SSH key pair in Termux
-
-~/.ssh $ ssh-keygen
-Generating public/private ed25519 key pair.
-Enter file in which to save the key (/data/data/com.termux/files/home/.ssh/id_ed25519): pineapple
-(Do not enter a passphrase for the key)
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-3. Set the permissions for the SSH private key
-
-~/.ssh $ chmod 400 pineapple
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-4. Exit Termux
-
-~/.ssh $ exit
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-5. Transfer the SSH public key to your host
-
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp -P 8022 u0_a321@localhost:/data/data/com.termux/files/home/.ssh/pineapple.pub .
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-6. Transfer the SSH public key to the pineapple
-
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> scp pineapple.pub root@172.16.42.1:/root/
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-7. SSH into the Pineapple
-
-PS C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools> ssh root@172.16.42.1
-
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-8. Append the SSH public key to .ssh/authorized_keys
-
-root@mk7:~# cat pineapple.pub >> .ssh/authorized_keys
+chmod 755 /data/data/com.termux
+chmod 755 /data/data/com.termux/files
+chmod 755 /data/data/com.termux/files/home
+chmod 755 /data/data/com.termux/files/usr
+chmod 755 /data/data/com.termux/files/usr/bin
+chmod 755 /data/data/com.termux/files/usr/lib
+chown -R 10377:10377 /data/data/com.termux/files/home
+chmod 755 /data/data/com.termux/files/usr/lib/apt/methods/https
+chcon u:object_r:shell_exec:s0 /data/data/com.termux/files/usr/bin/bash
+find /data/data/com.termux/files/usr/lib -type d -exec chmod 755 {} \;
