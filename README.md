@@ -1,70 +1,126 @@
-# Auth Relay Framework
+---
 
-## ⚠️ IMPORTANT: Responsible Use Only
+# **Auth Relay Framework**
 
-This repository contains security research tools intended **exclusively** for authorized penetration testing, security research, and educational purposes.
+## ⚠️ IMPORTANT: Authorized Use Only
 
-### 🎯 Intended Use Cases
+This repository contains security research tools intended **exclusively** for authorized penetration testing, defensive security research, and controlled laboratory environments.
 
-- **Authorized Penetration Testing**: Only use with explicit written permission from system owners
-- **Security Research**: Educational analysis of authentication mechanisms
-- **Red Team Exercises**: Internal security assessments with proper authorization
-- **Academic Research**: Understanding authentication bypass techniques for defensive purposes
+By using this project, you agree to:
 
-### 🚨 Legal and Ethical Requirements
-
-**BEFORE USING THESE TOOLS:**
-
-1. **Obtain Written Authorization**: Never use without explicit permission from network/system owners
-2. **Follow Local Laws**: Ensure compliance with all applicable laws and regulations
-3. **Respect Scope Limits**: Only test systems you are authorized to test
-4. **Document Properly**: Maintain clear records of authorized testing activities
-5. **Report Responsibly**: Follow coordinated disclosure practices for any vulnerabilities found
-
-### 🛡️ Responsible Disclosure
-
-If you discover vulnerabilities using these tools:
-- Contact the affected organization privately first
-- Allow reasonable time for fixes before public disclosure
-- Follow industry-standard responsible disclosure timelines
-- Consider using established bug bounty programs when available
-
-### 📚 Educational Purpose
-
-This code is shared to help security professionals understand:
-- How authentication bypass techniques work
-- Methods for testing MFA implementations
-- Common captive portal vulnerabilities
-- Defensive measures organizations should implement
-
-### ❌ Prohibited Uses
-
-**DO NOT USE** these tools for:
-- Unauthorized access to systems or networks
-- Bypassing security measures without permission
-- Any illegal activities
-- Causing harm or disruption to services
-- Commercial exploitation without proper licensing
-
-### 🔒 Security Recommendations for Organizations
-
-To protect against these techniques:
-- Implement proper certificate validation
-- Use HSTS and certificate pinning
-- Deploy network segmentation
-- Monitor for suspicious authentication patterns
-- Regularly audit captive portal implementations
-- Train users to recognize social engineering attempts
-
-### 📞 Contact
-
-For security researchers and organizations:
-- Report vulnerabilities responsibly
-- Contact me for questions about defensive measures
-- Collaboration welcome for improving security tools
+* Use it **only** on systems and networks you own or are explicitly authorized to test
+* Follow all applicable laws and regulations
+* Operate strictly within defined testing scope
+* Adhere to professional ethical security practices
 
 ---
 
-**Disclaimer**: This software is provided for educational and authorized testing purposes only. Users are solely responsible for ensuring their use complies with applicable laws and regulations. The author assumes no responsibility for misuse of these tools.
+## 🎯 Intended Use Cases
 
-**Remember**: With great power comes great responsibility. Use these tools ethically.
+* Authorized penetration testing
+* Red team exercises
+* Academic security research
+* MFA and captive-portal analysis
+* Controlled lab testing environments
+
+---
+
+## 🚨 Legal & Ethical Requirements
+
+### Before using this repository:
+
+1. **Obtain written authorization**
+2. **Follow all applicable laws**
+3. **Respect defined scope (ROE)**
+4. **Document tests**
+5. **Report findings responsibly**
+
+### ❌ Prohibited Uses
+
+* Unauthorized access
+* Production exploitation
+* Commercial misuse
+* Illegal activity of any kind
+
+### 🛡 Defensive Guidance for Organizations
+
+* Enforce HTTPS + HSTS
+* Validate certificates properly
+* Use certificate pinning
+* Use phishing-resistant MFA
+* Monitor authentication flows
+* Audit captive portal behavior
+
+---
+
+# **WordPress Auth Relay Framework Overview**
+
+This framework demonstrates a controlled authentication relay simulation using:
+
+### **1. WordPress Droplet**
+
+A public WordPress instance with:
+
+* Enforced 2FA
+* Let’s Encrypt TLS
+* SendGrid SMTP
+* miniOrange MFA enforcement
+
+### **2. WiFi Pineapple**
+
+Running EvilPortal with:
+
+* Cloned WordPress login + MFA pages
+* Static WordPress assets
+* Custom Nginx location blocks for relay endpoints
+
+### **3. Rooted Android Device**
+
+With:
+
+* Termux
+* Termux:X11
+* Selenium + Geckodriver
+* WordPress Relay Android App
+* Python automation script
+
+> ⚠️ Only for controlled, authorized, legal environments.
+
+---
+
+# **High-Level Objectives**
+
+## **Objective 1 — Provision the WordPress Droplet**
+
+* Deploy hardened WordPress
+* Configure DNS + TLS
+* Integrate SendGrid
+* Enforce miniOrange MFA
+
+## **Objective 2 — Configure the WiFi Pineapple**
+
+* Install + configure EvilPortal
+* Upload cloned WordPress portal
+* Add static WordPress styling files
+* Modify Nginx handlers
+* Enable/activate the portal
+
+## **Objective 3 — Deploy Android Relay App + Automation**
+
+* Configure the Termux environment
+* Install and test the WordPress Relay Android App
+* Run the Python automation script to perform the relay
+
+---
+
+# **Full Deployment Instructions**
+
+Full Deployment Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/objectives.txt
+
+---
+
+# **License & Disclaimer**
+
+This software is provided **for educational and authorized use only.**
+The author assumes **no liability** for misuse.
+You are solely responsible for complying with laws and authorization requirements.
