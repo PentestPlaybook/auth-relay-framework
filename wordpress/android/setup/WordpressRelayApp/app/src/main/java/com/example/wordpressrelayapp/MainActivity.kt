@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
                     // Step 2: Check packages.list for Termux
                     try {
                         val listProc = Runtime.getRuntime()
-                            .exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
+                            .exec(arrayOf("su", "-c", "grep '^com\\.termux ' /data/system/packages.list"))
                         val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
                         val listExit = listProc.waitFor()
 
@@ -196,10 +196,8 @@ class MainActivity : AppCompatActivity() {
                         )
                     )
 
-                    val output =
-                        BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-                    val error =
-                        BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
+                    val output = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+                    val error = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
                     val exitCode = proc.waitFor()
 
                     runOnUiThread {
@@ -270,14 +268,10 @@ class MainActivity : AppCompatActivity() {
                     writeFileAsRoot(checkScriptPath, checkScript)
                     execAsRoot("chmod 644 $checkScriptPath")
 
-                    val checkPipeline =
-                        "cat $checkScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                    val checkProc =
-                        Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", checkPipeline))
-                    val checkOutput =
-                        BufferedReader(InputStreamReader(checkProc.inputStream)).use { it.readText() }
-                    val checkError =
-                        BufferedReader(InputStreamReader(checkProc.errorStream)).use { it.readText() }
+                    val checkPipeline = "cat $checkScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                    val checkProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", checkPipeline))
+                    val checkOutput = BufferedReader(InputStreamReader(checkProc.inputStream)).use { it.readText() }
+                    val checkError = BufferedReader(InputStreamReader(checkProc.errorStream)).use { it.readText() }
                     checkProc.waitFor()
 
                     val sshKeyExists = checkOutput.contains("SSH_KEY:EXISTS")
@@ -298,7 +292,7 @@ class MainActivity : AppCompatActivity() {
                         statusMessage.appendLine("📝 Generating SSH key pair...")
 
                         val keygenSuccess = generateSshKeyPair(statusMessage)
-                        
+
                         if (keygenSuccess) {
                             needToTransferKey = true
                         }
@@ -306,7 +300,7 @@ class MainActivity : AppCompatActivity() {
                         // IMMEDIATELY PROMPT FOR PASSWORD AND TRANSFER KEY AFTER GENERATION
                         if (needToTransferKey) {
                             statusMessage.appendLine("🔑 Prompting for SSH password to transfer newly generated key...")
-                            
+
                             // Show current status before prompting
                             runOnUiThread {
                                 textView.text = statusMessage.toString()
@@ -355,7 +349,7 @@ class MainActivity : AppCompatActivity() {
                                 statusMessage.appendLine("⚙️ Transferring public key to Pineapple...")
 
                                 val transferSuccess = transferKeyWithPasswordAndRegenerate(userPassword!!, statusMessage)
-                                
+
                                 if (transferSuccess) {
                                     needToTransferKey = false // Mark as successfully transferred
                                 }
@@ -391,14 +385,10 @@ class MainActivity : AppCompatActivity() {
                         writeFileAsRoot(downloadScriptPath, downloadScript)
                         execAsRoot("chmod 644 $downloadScriptPath")
 
-                        val downloadPipeline =
-                            "cat $downloadScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                        val downloadProc =
-                            Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", downloadPipeline))
-                        val downloadOutput =
-                            BufferedReader(InputStreamReader(downloadProc.inputStream)).use { it.readText() }
-                        val downloadError =
-                            BufferedReader(InputStreamReader(downloadProc.errorStream)).use { it.readText() }
+                        val downloadPipeline = "cat $downloadScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                        val downloadProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", downloadPipeline))
+                        val downloadOutput = BufferedReader(InputStreamReader(downloadProc.inputStream)).use { it.readText() }
+                        val downloadError = BufferedReader(InputStreamReader(downloadProc.errorStream)).use { it.readText() }
                         downloadProc.waitFor()
 
                         if (downloadOutput.contains("DOWNLOAD:SUCCESS")) {
@@ -505,14 +495,10 @@ class MainActivity : AppCompatActivity() {
                             writeFileAsRoot(hostCheckScriptPath, hostCheckScript)
                             execAsRoot("chmod 644 $hostCheckScriptPath")
 
-                            val hostCheckPipeline =
-                                "cat $hostCheckScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                            val hostCheckProc =
-                                Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", hostCheckPipeline))
-                            val hostCheckOut =
-                                BufferedReader(InputStreamReader(hostCheckProc.inputStream)).use { it.readText() }
-                            val hostCheckErr =
-                                BufferedReader(InputStreamReader(hostCheckProc.errorStream)).use { it.readText() }
+                            val hostCheckPipeline = "cat $hostCheckScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                            val hostCheckProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", hostCheckPipeline))
+                            val hostCheckOut = BufferedReader(InputStreamReader(hostCheckProc.inputStream)).use { it.readText() }
+                            val hostCheckErr = BufferedReader(InputStreamReader(hostCheckProc.errorStream)).use { it.readText() }
                             hostCheckProc.waitFor()
 
                             // Parse the actual output flags
@@ -596,7 +582,7 @@ class MainActivity : AppCompatActivity() {
                                     appendLine("3) Ran ssh-keygen -R to delete old key: ${if (hostKeyRemoved) "YES" else "NO"}")
                                     appendLine("4) New connection successfully initiated: ${if (newConnectionOk) "YES" else "NO"}")
                                     appendLine("")
-                            
+
                                     when {
                                         !hostKeyFailed && !pubkeyFailed && newConnectionOk -> {
                                             appendLine("✅ Host key verification and pubkey authentication succeeded (no action needed)")
@@ -647,7 +633,7 @@ class MainActivity : AppCompatActivity() {
                                         }
                                     }
                                 }
-                        
+
                                 appendLine("—".repeat(50))
                             }
                         }
@@ -675,9 +661,6 @@ class MainActivity : AppCompatActivity() {
             }.start()
         }
 
-        // =========================
-        // BUTTON 4
-        // =========================
         button4.setOnClickListener {
             textView.text = "Loading last URL..."
 
@@ -691,7 +674,6 @@ class MainActivity : AppCompatActivity() {
                         return@Thread
                     }
 
-                    // Read the last URL from last-url.txt in Termux home directory
                     val readUrlScript = """
                         #!/data/data/com.termux/files/usr/bin/bash
                         export HOME=/data/data/com.termux/files/home
@@ -718,8 +700,7 @@ class MainActivity : AppCompatActivity() {
                         val input = EditText(this@MainActivity)
                         input.hint = "https://example.com"
                         input.inputType = InputType.TYPE_TEXT_VARIATION_URI
-                        
-                        // Pre-load the last URL if it exists
+
                         if (lastUrl.isNotEmpty()) {
                             input.setText(lastUrl)
                             textView.text = "Last URL loaded: $lastUrl"
@@ -727,7 +708,6 @@ class MainActivity : AppCompatActivity() {
                             textView.text = "No previous URL found. Enter a new one."
                         }
 
-                        // Create dialog with null button listeners initially
                         val dialog = android.app.AlertDialog.Builder(this@MainActivity)
                             .setTitle("Enter WordPress Domain")
                             .setMessage("Enter the full WordPress domain URL:")
@@ -737,23 +717,19 @@ class MainActivity : AppCompatActivity() {
                             .setNeutralButton("Clear", null)
                             .create()
 
-                        // Override button behavior after dialog is shown
                         dialog.setOnShowListener {
                             val startButton = dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE)
                             val cancelButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE)
                             val clearButton = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
 
-                            // Clear button - just clears text, doesn't close dialog
                             clearButton.setOnClickListener {
                                 input.setText("")
                             }
 
-                            // Cancel button - closes dialog
                             cancelButton.setOnClickListener {
                                 dialog.dismiss()
                             }
 
-                            // Start button - validates and proceeds
                             startButton.setOnClickListener {
                                 val domain = input.text.toString().trim()
 
@@ -774,7 +750,6 @@ class MainActivity : AppCompatActivity() {
 
                                 Thread {
                                     try {
-                                        // SAVE THE URL TO last-url.txt BEFORE PROCEEDING
                                         val saveUrlScript = """
                                             #!/data/data/com.termux/files/usr/bin/bash
                                             export HOME=/data/data/com.termux/files/home
@@ -805,275 +780,258 @@ class MainActivity : AppCompatActivity() {
                                             Thread.sleep(1500)
                                         }
 
-                                        // Build the script using nc (netcat) for PORT CHECKING
                                         val scriptContent = """
-                                #!$TERMUX_BASH
-                                set -e
+                                            #!$TERMUX_BASH
+                                            set -e
 
-                                export HOME=$TERMUX_HOME
-                                export PREFIX=/data/data/com.termux/files/usr
-                                export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+                                            export HOME=$TERMUX_HOME
+                                            export PREFIX=/data/data/com.termux/files/usr
+                                            export PATH="${'$'}PREFIX/bin:${'$'}PATH"
 
-                                # Critical: Set TMPDIR before anything else
-                                export TMPDIR="${'$'}HOME/tmp"
+                                            export TMPDIR="${'$'}HOME/tmp"
 
-                                # Use TCP connection instead of Unix socket
-                                export DISPLAY=:0
+                                            export DISPLAY=:0
 
-                                # Prevent headless mode
-                                unset MOZ_HEADLESS
-                                export MOZ_CRASHREPORTER_DISABLE=1
+                                            unset MOZ_HEADLESS
+                                            export MOZ_CRASHREPORTER_DISABLE=1
 
-                                mkdir -p "${'$'}TMPDIR"
-                                cd "${'$'}HOME"
+                                            mkdir -p "${'$'}TMPDIR"
+                                            cd "${'$'}HOME"
 
-                                echo "Button 4 pressed at ${'$'}(date)" > button4_test.log || true
+                                            # Test write permissions first
+                                            if ! touch test_write_permission.tmp 2>/dev/null; then
+                                                echo "ERROR: Cannot write to ${'$'}HOME - permission denied" >&2
+                                                echo "Please run as root:" >&2
+                                                echo "  chown -R $(id -u):$(id -g) ${'$'}HOME" >&2
+                                                echo "  chmod -R u+w ${'$'}HOME" >&2
+                                                exit 1
+                                            fi
+                                            rm -f test_write_permission.tmp
 
-                                # Aggressive cleanup of prior instances
-                                echo "Cleaning up previous processes..." > cleanup.log
-                                pkill -9 -f python.*wordpress-relay || true
-                                pkill -9 -f geckodriver || true
-                                pkill -9 -f firefox || true
-                                pkill -9 -f termux-x11 || true
-                                pkill -f 'ssh.*172.16.42.1' || true
+                                            echo "Button 4 pressed at ${'$'}(date)" > button4_test.log || true
 
-                                # Wait for ports to be released
-                                echo "Waiting for ports to be released..." >> cleanup.log
-                                for i in {1..10}; do
-                                  # Use nc to check if ports are in use
-                                  PORTS_IN_USE=0
-                                  nc -z 127.0.0.1 6000 2>/dev/null && PORTS_IN_USE=1
-                                  nc -z 127.0.0.1 4444 2>/dev/null && PORTS_IN_USE=1
-                                  nc -z 127.0.0.1 8080 2>/dev/null && PORTS_IN_USE=1
-                                  nc -z 127.0.0.1 9998 2>/dev/null && PORTS_IN_USE=1
-                                  
-                                  if [ "${'$'}PORTS_IN_USE" -eq 0 ]; then
-                                    echo "All ports released after ${'$'}i seconds" >> cleanup.log
-                                    break
-                                  fi
-                                  sleep 1
-                                done
-                                sleep 2
+                                            echo "Cleaning up previous processes..." > cleanup.log
+                                            pkill -9 -f python.*wordpress-relay || true
+                                            pkill -9 -f geckodriver || true
+                                            pkill -9 -f firefox || true
+                                            pkill -9 -f termux-x11 || true
+                                            pkill -f 'ssh.*172.16.42.1' || true
 
-                                # Start the X11 server with TCP listening enabled
-                                echo "Starting X11 server with TCP..." > x11_output.log
-                                echo "DISPLAY=${'$'}DISPLAY" >> x11_output.log
-                                termux-x11 :0 -ac -listen tcp >> x11_output.log 2>&1 &
-                                X11_PID=${'$'}!
-                                echo "X11 started with PID: ${'$'}X11_PID" >> x11_output.log
+                                            echo "Waiting for ports to be released..." >> cleanup.log
+                                            for i in {1..10}; do
+                                                PORTS_IN_USE=0
+                                                nc -z 127.0.0.1 6000 2>/dev/null && PORTS_IN_USE=1
+                                                nc -z 127.0.0.1 4444 2>/dev/null && PORTS_IN_USE=1
+                                                nc -z 127.0.0.1 8080 2>/dev/null && PORTS_IN_USE=1
+                                                nc -z 127.0.0.1 9998 2>/dev/null && PORTS_IN_USE=1
+                                                
+                                                if [ "${'$'}PORTS_IN_USE" -eq 0 ]; then
+                                                    echo "All ports released after ${'$'}i seconds" >> cleanup.log
+                                                    break
+                                                fi
+                                                sleep 1
+                                            done
+                                            sleep 2
 
-                                # Wait for X11 to be listening on TCP port 6000 using nc
-                                X11_READY=0
-                                for i in {1..30}; do
-                                  if ! kill -0 ${'$'}X11_PID 2>/dev/null; then
-                                    echo "ERROR: X11 process died" >> x11_output.log
-                                    exit 1
-                                  fi
-                                  if nc -z 127.0.0.1 6000 2>/dev/null; then
-                                    echo "✓ X11 listening on TCP port 6000 after ${'$'}i seconds" >> x11_output.log
-                                    X11_READY=1
-                                    break
-                                  fi
-                                  sleep 1
-                                done
-                                if [ "${'$'}X11_READY" -eq 0 ]; then
-                                  echo "ERROR: X11 not listening on port 6000" >> x11_output.log
-                                  exit 1
-                                fi
+                                            echo "Starting X11 server with TCP..." > x11_output.log
+                                            echo "DISPLAY=${'$'}DISPLAY" >> x11_output.log
+                                            termux-x11 :0 -ac -listen tcp >> x11_output.log 2>&1 &
+                                            X11_PID=${'$'}!
+                                            echo "X11 started with PID: ${'$'}X11_PID" >> x11_output.log
 
-                                sleep 3
+                                            X11_READY=0
+                                            for i in {1..30}; do
+                                                if ! kill -0 ${'$'}X11_PID 2>/dev/null; then
+                                                    echo "ERROR: X11 process died" >> x11_output.log
+                                                    exit 1
+                                                fi
+                                                if nc -z 127.0.0.1 6000 2>/dev/null; then
+                                                    echo "✓ X11 listening on TCP port 6000 after ${'$'}i seconds" >> x11_output.log
+                                                    X11_READY=1
+                                                    break
+                                                fi
+                                                sleep 1
+                                            done
+                                            if [ "${'$'}X11_READY" -eq 0 ]; then
+                                                echo "ERROR: X11 not listening on port 6000" >> x11_output.log
+                                                exit 1
+                                            fi
 
-                                # Test Firefox connection using TCP
-                                echo "Testing Firefox with DISPLAY=${'$'}DISPLAY..." >> x11_output.log
-                                timeout 10 firefox --no-remote --new-instance about:blank > firefox_test.log 2>&1 &
-                                FIREFOX_TEST_PID=${'$'}!
-                                sleep 4
-                                if kill -0 ${'$'}FIREFOX_TEST_PID 2>/dev/null; then
-                                  echo "✓ Firefox test SUCCESSFUL (PID: ${'$'}FIREFOX_TEST_PID)" >> x11_output.log
-                                  kill ${'$'}FIREFOX_TEST_PID 2>/dev/null || true
-                                  pkill -f firefox || true
-                                  sleep 2
-                                else
-                                  echo "✗ Firefox test FAILED" >> x11_output.log
-                                  cat firefox_test.log >> x11_output.log
-                                fi
+                                            sleep 3
 
-                                # Log environment
-                                {
-                                  echo "== Environment =="
-                                  echo "DISPLAY=${'$'}DISPLAY"
-                                  echo "TMPDIR=${'$'}TMPDIR"
-                                  echo "HOME=${'$'}HOME"
-                                  echo ""
-                                  echo "== Port Check (using nc) =="
-                                  echo -n "Port 6000: "; nc -z 127.0.0.1 6000 2>/dev/null && echo "LISTENING" || echo "NOT LISTENING"
-                                  echo -n "Port 4444: "; nc -z 127.0.0.1 4444 2>/dev/null && echo "LISTENING" || echo "NOT LISTENING"
-                                  echo -n "Port 8080: "; nc -z 127.0.0.1 8080 2>/dev/null && echo "LISTENING" || echo "NOT LISTENING"
-                                  echo ""
-                                  echo "== Processes =="
-                                  ps aux | grep -E "(termux-x11|firefox|gecko)" | grep -v grep || true
-                                } > env_check.log 2>&1
+                                            echo "Testing Firefox with DISPLAY=${'$'}DISPLAY..." >> x11_output.log
+                                            timeout 10 firefox --no-remote --new-instance about:blank > firefox_test.log 2>&1 &
+                                            FIREFOX_TEST_PID=${'$'}!
+                                            sleep 4
+                                            if kill -0 ${'$'}FIREFOX_TEST_PID 2>/dev/null; then
+                                                echo "✓ Firefox test SUCCESSFUL (PID: ${'$'}FIREFOX_TEST_PID)" >> x11_output.log
+                                                kill ${'$'}FIREFOX_TEST_PID 2>/dev/null || true
+                                                pkill -f firefox || true
+                                                sleep 2
+                                            else
+                                                echo "✗ Firefox test FAILED" >> x11_output.log
+                                                cat firefox_test.log >> x11_output.log
+                                            fi
 
-                                # Start geckodriver
-                                echo "Starting geckodriver..." >> x11_output.log
-                                geckodriver --port 4444 --log debug > geckodriver.log 2>&1 &
-                                GECKO_PID=${'$'}!
-                                echo "Geckodriver PID: ${'$'}GECKO_PID" >> x11_output.log
-                                sleep 3
-                                if ! kill -0 ${'$'}GECKO_PID 2>/dev/null; then
-                                  echo "ERROR: Geckodriver died" >> x11_output.log
-                                  cat geckodriver.log >> x11_output.log
-                                  exit 1
-                                fi
+                                            {
+                                                echo "== Environment =="
+                                                echo "DISPLAY=${'$'}DISPLAY"
+                                                echo "TMPDIR=${'$'}TMPDIR"
+                                                echo "HOME=${'$'}HOME"
+                                                echo ""
+                                                echo "== Port Check (using nc) =="
+                                                echo -n "Port 6000: "; nc -z 127.0.0.1 6000 2>/dev/null && echo "LISTENING" || echo "NOT LISTENING"
+                                                echo -n "Port 4444: "; nc -z 127.0.0.1 4444 2>/dev/null && echo "LISTENING" || echo "NOT LISTENING"
+                                                echo -n "Port 8080: "; nc -z 127.0.0.1 8080 2>/dev/null && echo "LISTENING" || echo "NOT LISTENING"
+                                                echo ""
+                                                echo "== Processes =="
+                                                ps aux | grep -E "(termux-x11|firefox|gecko)" | grep -v grep || true
+                                            } > env_check.log 2>&1
 
-                                # Start Python relay with user-provided domain
-                                echo "Starting Python relay with domain: $domain..." >> x11_output.log
-                                python "${'$'}HOME/wordpress-relay.py" --domain $domain --port 8080 > python_output.log 2>&1 &
-                                PYTHON_PID=${'$'}!
+                                            echo "Starting geckodriver..." >> x11_output.log
+                                            geckodriver --port 4444 --log debug > geckodriver.log 2>&1 &
+                                            GECKO_PID=${'$'}!
+                                            echo "Geckodriver PID: ${'$'}GECKO_PID" >> x11_output.log
+                                            sleep 3
+                                            if ! kill -0 ${'$'}GECKO_PID 2>/dev/null; then
+                                                echo "ERROR: Geckodriver died" >> x11_output.log
+                                                cat geckodriver.log >> x11_output.log
+                                                exit 1
+                                            fi
 
-                                echo "=== All processes started ===" >> x11_output.log
-                                echo "X11: ${'$'}X11_PID (TCP port 6000)" >> x11_output.log
-                                echo "Geckodriver: ${'$'}GECKO_PID (port 4444)" >> x11_output.log
-                                echo "Python: ${'$'}PYTHON_PID (port 8080, domain: $domain)" >> x11_output.log
+                                            echo "Starting Python relay with domain: $domain..." >> x11_output.log
+                                            python "${'$'}HOME/wordpress-relay.py" --domain $domain --port 8080 > python_output.log 2>&1 &
+                                            PYTHON_PID=${'$'}!
 
-                                # NEW: Comprehensive port checking using nc before SSH tunnel setup
-                                echo "" >> x11_output.log
-                                echo "=== Waiting for all required ports to be listening ===" >> x11_output.log
-                                echo 'Checking required ports using nc...' > ssh_setup.log
+                                            echo "=== All processes started ===" >> x11_output.log
+                                            echo "X11: ${'$'}X11_PID (TCP port 6000)" >> x11_output.log
+                                            echo "Geckodriver: ${'$'}GECKO_PID (port 4444)" >> x11_output.log
+                                            echo "Python: ${'$'}PYTHON_PID (port 8080, domain: $domain)" >> x11_output.log
 
-                                # Required ports: 6000 (X11), 4444 (geckodriver), 8080 (python relay)
-                                ALL_PORTS_READY=0
-                                for attempt in {1..60}; do
-                                  PORT_6000_OK=0
-                                  PORT_4444_OK=0
-                                  PORT_8080_OK=0
-                                  
-                                  # Check port 6000 (X11) using nc
-                                  if nc -z 127.0.0.1 6000 2>/dev/null; then
-                                    PORT_6000_OK=1
-                                  fi
-                                  
-                                  # Check port 4444 (geckodriver) using nc
-                                  if nc -z 127.0.0.1 4444 2>/dev/null; then
-                                    PORT_4444_OK=1
-                                  fi
-                                  
-                                  # Check port 8080 (python relay) using nc
-                                  if nc -z 127.0.0.1 8080 2>/dev/null; then
-                                    PORT_8080_OK=1
-                                  fi
-                                  
-                                  # Log current port status
-                                  echo "Attempt ${'$'}attempt/60:" >> ssh_setup.log
-                                  echo "  Port 6000 (X11):        ${'$'}([ "${'$'}PORT_6000_OK" -eq 1 ] && echo '✓' || echo '✗')" >> ssh_setup.log
-                                  echo "  Port 4444 (geckodriver): ${'$'}([ "${'$'}PORT_4444_OK" -eq 1 ] && echo '✓' || echo '✗')" >> ssh_setup.log
-                                  echo "  Port 8080 (python):      ${'$'}([ "${'$'}PORT_8080_OK" -eq 1 ] && echo '✓' || echo '✗')" >> ssh_setup.log
-                                  
-                                  # Check if all ports are ready
-                                  if [ "${'$'}PORT_6000_OK" -eq 1 ] && [ "${'$'}PORT_4444_OK" -eq 1 ] && [ "${'$'}PORT_8080_OK" -eq 1 ]; then
-                                    echo "" >> ssh_setup.log
-                                    echo "✓ All required ports are listening after ${'$'}attempt seconds!" >> ssh_setup.log
-                                    echo "✓ All required ports confirmed listening after ${'$'}attempt seconds" >> x11_output.log
-                                    ALL_PORTS_READY=1
-                                    break
-                                  fi
-                                  
-                                  sleep 1
-                                done
+                                            echo "" >> x11_output.log
+                                            echo "=== Waiting for all required ports to be listening ===" >> x11_output.log
+                                            echo 'Checking required ports using nc...' > ssh_setup.log
 
-                                if [ "${'$'}ALL_PORTS_READY" -eq 0 ]; then
-                                  echo "" >> ssh_setup.log
-                                  echo "✗ FATAL: Not all required ports listening after 60 seconds" >> ssh_setup.log
-                                  echo "ERROR: Port readiness check failed" >> x11_output.log
-                                  echo "" >> ssh_setup.log
-                                  echo "Final port status using nc:" >> ssh_setup.log
-                                  echo -n "  Port 6000: " >> ssh_setup.log
-                                  nc -z 127.0.0.1 6000 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
-                                  echo -n "  Port 4444: " >> ssh_setup.log
-                                  nc -z 127.0.0.1 4444 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
-                                  echo -n "  Port 8080: " >> ssh_setup.log
-                                  nc -z 127.0.0.1 8080 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
-                                  echo "" >> ssh_setup.log
-                                  echo "Process status:" >> ssh_setup.log
-                                  ps aux | grep -E "(termux-x11|geckodriver|python.*wordpress)" | grep -v grep >> ssh_setup.log || echo "No processes found" >> ssh_setup.log
-                                  echo "SSH_SETUP_FAILED:PORTS_NOT_READY" >> ssh_setup.log
-                                  exit 1
-                                fi
+                                            ALL_PORTS_READY=0
+                                            for attempt in {1..60}; do
+                                                PORT_6000_OK=0
+                                                PORT_4444_OK=0
+                                                PORT_8080_OK=0
+                                                
+                                                if nc -z 127.0.0.1 6000 2>/dev/null; then
+                                                    PORT_6000_OK=1
+                                                fi
+                                                
+                                                if nc -z 127.0.0.1 4444 2>/dev/null; then
+                                                    PORT_4444_OK=1
+                                                fi
+                                                
+                                                if nc -z 127.0.0.1 8080 2>/dev/null; then
+                                                    PORT_8080_OK=1
+                                                fi
+                                                
+                                                echo "Attempt ${'$'}attempt/60:" >> ssh_setup.log
+                                                echo "  Port 6000 (X11):        ${'$'}([ "${'$'}PORT_6000_OK" -eq 1 ] && echo '✓' || echo '✗')" >> ssh_setup.log
+                                                echo "  Port 4444 (geckodriver): ${'$'}([ "${'$'}PORT_4444_OK" -eq 1 ] && echo '✓' || echo '✗')" >> ssh_setup.log
+                                                echo "  Port 8080 (python):      ${'$'}([ "${'$'}PORT_8080_OK" -eq 1 ] && echo '✓' || echo '✗')" >> ssh_setup.log
+                                                
+                                                if [ "${'$'}PORT_6000_OK" -eq 1 ] && [ "${'$'}PORT_4444_OK" -eq 1 ] && [ "${'$'}PORT_8080_OK" -eq 1 ]; then
+                                                    echo "" >> ssh_setup.log
+                                                    echo "✓ All required ports are listening after ${'$'}attempt seconds!" >> ssh_setup.log
+                                                    echo "✓ All required ports confirmed listening after ${'$'}attempt seconds" >> x11_output.log
+                                                    ALL_PORTS_READY=1
+                                                    break
+                                                fi
+                                                
+                                                sleep 1
+                                            done
 
-                                # All ports confirmed listening, now proceed with SSH setup
-                                echo "" >> ssh_setup.log
-                                echo "=== SSH Port Forward Setup ===" >> ssh_setup.log
-                                echo "" >> x11_output.log
-                                echo "=== SSH Port Forward Setup ===" >> x11_output.log
+                                            if [ "${'$'}ALL_PORTS_READY" -eq 0 ]; then
+                                                echo "" >> ssh_setup.log
+                                                echo "✗ FATAL: Not all required ports listening after 60 seconds" >> ssh_setup.log
+                                                echo "ERROR: Port readiness check failed" >> x11_output.log
+                                                echo "" >> ssh_setup.log
+                                                echo "Final port status using nc:" >> ssh_setup.log
+                                                echo -n "  Port 6000: " >> ssh_setup.log
+                                                nc -z 127.0.0.1 6000 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
+                                                echo -n "  Port 4444: " >> ssh_setup.log
+                                                nc -z 127.0.0.1 4444 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
+                                                echo -n "  Port 8080: " >> ssh_setup.log
+                                                nc -z 127.0.0.1 8080 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
+                                                echo "" >> ssh_setup.log
+                                                echo "Process status:" >> ssh_setup.log
+                                                ps aux | grep -E "(termux-x11|geckodriver|python.*wordpress)" | grep -v grep >> ssh_setup.log || echo "No processes found" >> ssh_setup.log
+                                                echo "SSH_SETUP_FAILED:PORTS_NOT_READY" >> ssh_setup.log
+                                                exit 1
+                                            fi
 
-                                # Kill any existing SSH tunnels
-                                echo "Cleaning up old SSH tunnels..." >> ssh_setup.log
-                                pkill -f 'ssh.*172.16.42.1' || true
-                                sleep 2
+                                            echo "" >> ssh_setup.log
+                                            echo "=== SSH Port Forward Setup ===" >> ssh_setup.log
+                                            echo "" >> x11_output.log
+                                            echo "=== SSH Port Forward Setup ===" >> x11_output.log
 
-                                # NETWORK CONNECTIVITY CHECK BEFORE SSH
-                                echo "Checking network connectivity to Pineapple..." >> ssh_setup.log
-                                if timeout 10 ping -c 2 172.16.42.1 > /dev/null 2>&1; then
-                                  echo "✓ Network connectivity confirmed" >> ssh_setup.log
-                                else
-                                  echo "✗ FATAL: Cannot reach Pineapple at 172.16.42.1" >> ssh_setup.log
-                                  echo "SSH_SETUP_FAILED:NO_NETWORK" >> ssh_setup.log
-                                  exit 2
-                                fi
+                                            echo "Cleaning up old SSH tunnels..." >> ssh_setup.log
+                                            pkill -f 'ssh.*172.16.42.1' || true
+                                            sleep 2
 
-                                # Set up SSH port forward 1: Pineapple:9999 → Android:8080
-                                echo "Setting up Forward 1: Pineapple:9999 → Android:8080" >> ssh_setup.log
-                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -o ConnectTimeout=10 -N -R 9999:localhost:8080 root@172.16.42.1 > ssh_forward1.log 2>&1 &
-                                FORWARD1_PID=${'$'}!
-                                echo "Forward 1 PID: ${'$'}FORWARD1_PID" >> ssh_setup.log
-                                echo "Forward 1 started with PID: ${'$'}FORWARD1_PID" >> x11_output.log
-                                sleep 3
-                                if ! kill -0 ${'$'}FORWARD1_PID 2>/dev/null; then
-                                  echo "✗ FATAL: Forward 1 SSH tunnel failed to establish" >> ssh_setup.log
-                                  cat ssh_forward1.log >> ssh_setup.log
-                                  echo "SSH_SETUP_FAILED:FORWARD1_DIED" >> ssh_setup.log
-                                  exit 2
-                                fi
-                                echo "✓ Forward 1 verified running" >> ssh_setup.log
+                                            echo "Checking network connectivity to Pineapple..." >> ssh_setup.log
+                                            if timeout 10 ping -c 2 172.16.42.1 > /dev/null 2>&1; then
+                                                echo "✓ Network connectivity confirmed" >> ssh_setup.log
+                                            else
+                                                echo "✗ FATAL: Cannot reach Pineapple at 172.16.42.1" >> ssh_setup.log
+                                                echo "SSH_SETUP_FAILED:NO_NETWORK" >> ssh_setup.log
+                                                exit 2
+                                            fi
 
-                                # Set up SSH port forward 2: Android:9998 → Pineapple:80
-                                echo "Setting up Forward 2: Android:9998 → Pineapple:80" >> ssh_setup.log
-                                nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -o ConnectTimeout=10 -N -L 9998:172.16.42.1:80 root@172.16.42.1 > ssh_forward2.log 2>&1 &
-                                FORWARD2_PID=${'$'}!
-                                echo "Forward 2 PID: ${'$'}FORWARD2_PID" >> ssh_setup.log
-                                echo "Forward 2 started with PID: ${'$'}FORWARD2_PID" >> x11_output.log
-                                sleep 3
+                                            echo "Setting up Forward 1: Pineapple:9999 → Android:8080" >> ssh_setup.log
+                                            nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -o ConnectTimeout=10 -N -R 9999:localhost:8080 root@172.16.42.1 > ssh_forward1.log 2>&1 &
+                                            FORWARD1_PID=${'$'}!
+                                            echo "Forward 1 PID: ${'$'}FORWARD1_PID" >> ssh_setup.log
+                                            echo "Forward 1 started with PID: ${'$'}FORWARD1_PID" >> x11_output.log
+                                            sleep 3
+                                            if ! kill -0 ${'$'}FORWARD1_PID 2>/dev/null; then
+                                                echo "✗ FATAL: Forward 1 SSH tunnel failed to establish" >> ssh_setup.log
+                                                cat ssh_forward1.log >> ssh_setup.log
+                                                echo "SSH_SETUP_FAILED:FORWARD1_DIED" >> ssh_setup.log
+                                                exit 2
+                                            fi
+                                            echo "✓ Forward 1 verified running" >> ssh_setup.log
 
-                                # Verify SSH tunnels are running
-                                echo '' >> ssh_setup.log
-                                echo '=== SSH Tunnel Status ===' >> ssh_setup.log
-                                ps aux | grep 'ssh.*172.16.42.1' | grep -v grep >> ssh_setup.log || echo 'No SSH tunnels found' >> ssh_setup.log
+                                            echo "Setting up Forward 2: Android:9998 → Pineapple:80" >> ssh_setup.log
+                                            nohup ssh -i ~/.ssh/pineapple -o StrictHostKeyChecking=no -o ConnectTimeout=10 -N -L 9998:172.16.42.1:80 root@172.16.42.1 > ssh_forward2.log 2>&1 &
+                                            FORWARD2_PID=${'$'}!
+                                            echo "Forward 2 PID: ${'$'}FORWARD2_PID" >> ssh_setup.log
+                                            echo "Forward 2 started with PID: ${'$'}FORWARD2_PID" >> x11_output.log
+                                            sleep 3
 
-                                echo '' >> ssh_setup.log
-                                echo '=== Port Status (using nc) ===' >> ssh_setup.log
-                                echo -n "Port 8080: " >> ssh_setup.log
-                                nc -z 127.0.0.1 8080 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
-                                echo -n "Port 9998: " >> ssh_setup.log
-                                nc -z 127.0.0.1 9998 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
+                                            echo '' >> ssh_setup.log
+                                            echo '=== SSH Tunnel Status ===' >> ssh_setup.log
+                                            ps aux | grep 'ssh.*172.16.42.1' | grep -v grep >> ssh_setup.log || echo 'No SSH tunnels found' >> ssh_setup.log
 
-                                echo 'SSH_SETUP_SUCCESS' >> ssh_setup.log
-                                echo 'SSH setup complete!' >> ssh_setup.log
-                                echo "✓ SSH port forwards configured" >> x11_output.log
+                                            echo '' >> ssh_setup.log
+                                            echo '=== Port Status (using nc) ===' >> ssh_setup.log
+                                            echo -n "Port 8080: " >> ssh_setup.log
+                                            nc -z 127.0.0.1 8080 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
+                                            echo -n "Port 9998: " >> ssh_setup.log
+                                            nc -z 127.0.0.1 9998 2>/dev/null && echo "LISTENING" >> ssh_setup.log || echo "NOT LISTENING" >> ssh_setup.log
 
-                                echo "" >> x11_output.log
-                                echo "=== COMPLETE SETUP SUMMARY ===" >> x11_output.log
-                                echo "All services started and SSH tunnels established" >> x11_output.log
-                                echo "X11 PID: ${'$'}X11_PID" >> x11_output.log
-                                echo "Geckodriver PID: ${'$'}GECKO_PID" >> x11_output.log
-                                echo "Python PID: ${'$'}PYTHON_PID" >> x11_output.log
-                                echo "SSH Forward 1 PID: ${'$'}FORWARD1_PID" >> x11_output.log
-                                echo "SSH Forward 2 PID: ${'$'}FORWARD2_PID" >> x11_output.log
-                            """.trimIndent()
+                                            echo 'SSH_SETUP_SUCCESS' >> ssh_setup.log
+                                            echo 'SSH setup complete!' >> ssh_setup.log
+                                            echo "✓ SSH port forwards configured" >> x11_output.log
+
+                                            echo "" >> x11_output.log
+                                            echo "=== COMPLETE SETUP SUMMARY ===" >> x11_output.log
+                                            echo "All services started and SSH tunnels established" >> x11_output.log
+                                            echo "X11 PID: ${'$'}X11_PID" >> x11_output.log
+                                            echo "Geckodriver PID: ${'$'}GECKO_PID" >> x11_output.log
+                                            echo "Python PID: ${'$'}PYTHON_PID" >> x11_output.log
+                                            echo "SSH Forward 1 PID: ${'$'}FORWARD1_PID" >> x11_output.log
+                                            echo "SSH Forward 2 PID: ${'$'}FORWARD2_PID" >> x11_output.log
+                                        """.trimIndent()
 
                                         writeFileAsRoot(SD_SCRIPT, scriptContent)
                                         execAsRoot("chmod 644 $SD_SCRIPT")
 
-                                        // Do NOT switch to X11 yet. Execute, gather logs, then conditionally launch.
                                         try {
                                             val termuxLaunch = packageManager.getLaunchIntentForPackage("com.termux")
                                                 ?: Intent().apply {
@@ -1081,7 +1039,6 @@ class MainActivity : AppCompatActivity() {
                                                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                                 }
                                             startActivity(termuxLaunch)
-                                            // Quickly return to our app
                                             Thread.sleep(1200)
                                             val returnIntent = Intent(this@MainActivity, MainActivity::class.java).apply {
                                                 flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
@@ -1095,17 +1052,13 @@ class MainActivity : AppCompatActivity() {
                                             return@Thread
                                         }
 
-                                        val pipeline =
-                                            "cat $SD_SCRIPT | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                                        val pipeline = "cat $SD_SCRIPT | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
                                         val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
 
-                                        val stdout =
-                                            BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-                                        val stderr =
-                                            BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
+                                        val stdout = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+                                        val stderr = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
                                         val exit = proc.waitFor()
 
-                                        // Read logs from Termux after execution
                                         Thread.sleep(1500)
 
                                         val readLogsScript = mutableListOf<String>()
@@ -1147,12 +1100,9 @@ class MainActivity : AppCompatActivity() {
                                         writeFileAsRoot(readLogsScriptPath, readLogsScriptContent)
                                         execAsRoot("chmod 644 $readLogsScriptPath")
 
-                                        val readPipeline =
-                                            "cat $readLogsScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                                        val readProc =
-                                            Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
-                                        val allLogs =
-                                            BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
+                                        val readPipeline = "cat $readLogsScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                                        val readProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
+                                        val allLogs = BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
                                         readProc.waitFor()
 
                                         fun section(after: String, before: String? = null): String {
@@ -1161,22 +1111,14 @@ class MainActivity : AppCompatActivity() {
                                             else a.substringBefore(before, "").trim()
                                         }
 
-                                        val x11LogContent =
-                                            section("=== X11_OUTPUT_LOG ===", "=== CLEANUP_LOG ===")
-                                        val cleanupLogContent =
-                                            section("=== CLEANUP_LOG ===", "=== ENV_CHECK_LOG ===")
-                                        val envCheckLogContent =
-                                            section("=== ENV_CHECK_LOG ===", "=== GECKODRIVER_LOG ===")
-                                        val geckodriverLogContent =
-                                            section("=== GECKODRIVER_LOG ===", "=== PYTHON_OUTPUT_LOG ===")
-                                        val pythonLogContent =
-                                            section("=== PYTHON_OUTPUT_LOG ===", "=== SSH_SETUP_LOG ===")
-                                        val sshSetupLogContent =
-                                            section("=== SSH_SETUP_LOG ===", "=== SSH_FORWARD1_LOG ===")
-                                        val sshForward1LogContent =
-                                            section("=== SSH_FORWARD1_LOG ===", "=== SSH_FORWARD2_LOG ===")
-                                        val sshForward2LogContent =
-                                            section("=== SSH_FORWARD2_LOG ===")
+                                        val x11LogContent = section("=== X11_OUTPUT_LOG ===", "=== CLEANUP_LOG ===")
+                                        val cleanupLogContent = section("=== CLEANUP_LOG ===", "=== ENV_CHECK_LOG ===")
+                                        val envCheckLogContent = section("=== ENV_CHECK_LOG ===", "=== GECKODRIVER_LOG ===")
+                                        val geckodriverLogContent = section("=== GECKODRIVER_LOG ===", "=== PYTHON_OUTPUT_LOG ===")
+                                        val pythonLogContent = section("=== PYTHON_OUTPUT_LOG ===", "=== SSH_SETUP_LOG ===")
+                                        val sshSetupLogContent = section("=== SSH_SETUP_LOG ===", "=== SSH_FORWARD1_LOG ===")
+                                        val sshForward1LogContent = section("=== SSH_FORWARD1_LOG ===", "=== SSH_FORWARD2_LOG ===")
+                                        val sshForward2LogContent = section("=== SSH_FORWARD2_LOG ===")
 
                                         val sshOk = sshSetupLogContent.contains("SSH_SETUP_SUCCESS")
                                         val x11Ok = x11LogContent.contains("listening on TCP port 6000") ||
@@ -1187,7 +1129,6 @@ class MainActivity : AppCompatActivity() {
 
                                         val overallSuccess = (exit == 0) && sshOk && x11Ok && geckoOk && allPortsReady
 
-                                        // Show output in the app FIRST
                                         runOnUiThread {
                                             textView.text = buildString {
                                                 if (overallSuccess) {
@@ -1236,7 +1177,6 @@ class MainActivity : AppCompatActivity() {
                                             }.trim()
                                         }
 
-                                        // Only after showing output, switch to X11 if successful
                                         if (overallSuccess) {
                                             try {
                                                 Handler(Looper.getMainLooper()).postDelayed({
@@ -1281,10 +1221,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Helper function to generate SSH key pair
-     * Returns true if successful, false otherwise
-     */
     private fun generateSshKeyPair(statusMessage: StringBuilder): Boolean {
         try {
             val keygenLines = mutableListOf<String>()
@@ -1306,14 +1242,10 @@ class MainActivity : AppCompatActivity() {
             writeFileAsRoot(keygenScriptPath, keygenScript)
             execAsRoot("chmod 644 $keygenScriptPath")
 
-            val keygenPipeline =
-                "cat $keygenScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-            val keygenProc =
-                Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", keygenPipeline))
-            val keygenOutput =
-                BufferedReader(InputStreamReader(keygenProc.inputStream)).use { it.readText() }
-            val keygenError =
-                BufferedReader(InputStreamReader(keygenProc.errorStream)).use { it.readText() }
+            val keygenPipeline = "cat $keygenScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+            val keygenProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", keygenPipeline))
+            val keygenOutput = BufferedReader(InputStreamReader(keygenProc.inputStream)).use { it.readText() }
+            val keygenError = BufferedReader(InputStreamReader(keygenProc.errorStream)).use { it.readText() }
             keygenProc.waitFor()
 
             if (keygenOutput.contains("KEYGEN:SUCCESS")) {
@@ -1331,10 +1263,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Helper function to delete SSH key pair
-     * Returns true if successful, false otherwise
-     */
     private fun deleteSshKeyPair(statusMessage: StringBuilder): Boolean {
         try {
             val deleteLines = mutableListOf<String>()
@@ -1355,12 +1283,9 @@ class MainActivity : AppCompatActivity() {
             writeFileAsRoot(deleteScriptPath, deleteScript)
             execAsRoot("chmod 644 $deleteScriptPath")
 
-            val deletePipeline =
-                "cat $deleteScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-            val deleteProc =
-                Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", deletePipeline))
-            val deleteOutput =
-                BufferedReader(InputStreamReader(deleteProc.inputStream)).use { it.readText() }
+            val deletePipeline = "cat $deleteScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+            val deleteProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", deletePipeline))
+            val deleteOutput = BufferedReader(InputStreamReader(deleteProc.inputStream)).use { it.readText() }
             deleteProc.waitFor()
 
             if (deleteOutput.contains("DELETE:SUCCESS")) {
@@ -1376,17 +1301,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Helper function to transfer SSH key using sshpass with provided password
-     * If verification fails, automatically regenerates keys and retries
-     * Returns true if successful, false otherwise
-     */
     private fun transferKeyWithPasswordAndRegenerate(password: String, statusMessage: StringBuilder): Boolean {
         try {
-            // Build script to transfer key using sshpass with provided password
             val sshpassLines = mutableListOf<String>()
             sshpassLines.add("#!/data/data/com.termux/files/usr/bin/bash")
-            sshpassLines.add("set +e")  // Don't exit on error
+            sshpassLines.add("set +e")
             sshpassLines.add("")
             sshpassLines.add("export HOME=/data/data/com.termux/files/home")
             sshpassLines.add("export PREFIX=/data/data/com.termux/files/usr")
@@ -1396,21 +1315,17 @@ class MainActivity : AppCompatActivity() {
             sshpassLines.add("")
             sshpassLines.add("echo 'SSHPASS:START'")
             sshpassLines.add("")
-            sshpassLines.add("# Check if public key exists")
             sshpassLines.add("if [ ! -f .ssh/pineapple.pub ]; then")
             sshpassLines.add("  echo 'SSHPASS:NO_PUBLIC_KEY'")
             sshpassLines.add("  echo 'SSHPASS:END'")
             sshpassLines.add("  exit 1")
             sshpassLines.add("fi")
             sshpassLines.add("")
-            sshpassLines.add("# Password will be provided via temp file")
             sshpassLines.add("PASS_FILE=\"${'$'}HOME/.ssh_pass_temp\"")
             sshpassLines.add("")
-            sshpassLines.add("# Attempt to transfer key using sshpass")
             sshpassLines.add("sshpass -f \"${'$'}PASS_FILE\" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@172.16.42.1 'mkdir -p /root/.ssh && chmod 700 /root/.ssh && cat >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys' < .ssh/pineapple.pub 2>sshpass_error.txt")
             sshpassLines.add("SSHPASS_EXIT=${'$'}?")
             sshpassLines.add("")
-            sshpassLines.add("# Clean up password file immediately")
             sshpassLines.add("rm -f \"${'$'}PASS_FILE\"")
             sshpassLines.add("")
             sshpassLines.add("if [ ${'$'}SSHPASS_EXIT -eq 0 ]; then")
@@ -1431,7 +1346,6 @@ class MainActivity : AppCompatActivity() {
             writeFileAsRoot(sshpassScriptPath, sshpassScript)
             execAsRoot("chmod 644 $sshpassScriptPath")
 
-            // First, write the password to a temporary file in Termux home
             val writePasswordScript = """
                 #!/data/data/com.termux/files/usr/bin/bash
                 export HOME=/data/data/com.termux/files/home
@@ -1460,14 +1374,12 @@ class MainActivity : AppCompatActivity() {
                 return false
             }
 
-            // Now execute sshpass script
             val sshpassPipeline = "cat $sshpassScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
             val sshpassProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", sshpassPipeline))
             val sshpassOut = BufferedReader(InputStreamReader(sshpassProc.inputStream)).use { it.readText() }
             val sshpassErr = BufferedReader(InputStreamReader(sshpassProc.errorStream)).use { it.readText() }
             sshpassProc.waitFor()
 
-            // Check if sshpass succeeded
             val sshpassSuccess = sshpassOut.contains("SSHPASS:SUCCESS")
             val noPublicKey = sshpassOut.contains("SSHPASS:NO_PUBLIC_KEY")
 
@@ -1499,7 +1411,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            // If sshpass succeeded, verify the connection now works
             if (sshpassSuccess) {
                 statusMessage.appendLine("")
                 statusMessage.appendLine("🔄 Verifying SSH connection after key transfer...")
@@ -1526,12 +1437,9 @@ class MainActivity : AppCompatActivity() {
                 writeFileAsRoot(verifyScriptPath, verifyScript)
                 execAsRoot("chmod 644 $verifyScriptPath")
 
-                val verifyPipeline =
-                    "cat $verifyScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                val verifyProc =
-                    Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", verifyPipeline))
-                val verifyOut =
-                    BufferedReader(InputStreamReader(verifyProc.inputStream)).use { it.readText() }
+                val verifyPipeline = "cat $verifyScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                val verifyProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", verifyPipeline))
+                val verifyOut = BufferedReader(InputStreamReader(verifyProc.inputStream)).use { it.readText() }
                 verifyProc.waitFor()
 
                 val verifySuccess = verifyOut.contains("VERIFY:SUCCESS")
@@ -1543,21 +1451,17 @@ class MainActivity : AppCompatActivity() {
                         appendLine("   Detected malformed key pair - regenerating keys...")
                     }
                 }
-                
-                // If verification failed, the keys are malformed - regenerate them
+
                 if (!verifySuccess) {
-                    // Delete the malformed key pair
                     val deleteSuccess = deleteSshKeyPair(statusMessage)
-                    
+
                     if (deleteSuccess) {
-                        // Generate new key pair
                         val newKeygenSuccess = generateSshKeyPair(statusMessage)
-                        
+
                         if (newKeygenSuccess) {
                             statusMessage.appendLine("")
                             statusMessage.appendLine("⚙️ Transferring newly generated key to Pineapple...")
-                            
-                            // Write password file again
+
                             val writePasswordProc2 = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", writePasswordPipeline))
                             val writePasswordOut2 = BufferedReader(InputStreamReader(writePasswordProc2.inputStream)).use { it.readText() }
                             writePasswordProc2.waitFor()
@@ -1569,14 +1473,13 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 return false
                             }
-                            
-                            // Transfer the new key with the same password
+
                             val sshpassProc2 = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", sshpassPipeline))
                             val sshpassOut2 = BufferedReader(InputStreamReader(sshpassProc2.inputStream)).use { it.readText() }
                             sshpassProc2.waitFor()
 
                             val sshpassSuccess2 = sshpassOut2.contains("SSHPASS:SUCCESS")
-                            
+
                             statusMessage.apply {
                                 appendLine("")
                                 if (sshpassSuccess2) {
@@ -1586,11 +1489,10 @@ class MainActivity : AppCompatActivity() {
                                     return false
                                 }
                             }
-                            
-                            // Verify the new connection
+
                             statusMessage.appendLine("")
                             statusMessage.appendLine("🔄 Verifying SSH connection with new key...")
-                            
+
                             val verifyProc2 = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", verifyPipeline))
                             val verifyOut2 = BufferedReader(InputStreamReader(verifyProc2.inputStream)).use { it.readText() }
                             verifyProc2.waitFor()
@@ -1604,13 +1506,13 @@ class MainActivity : AppCompatActivity() {
                                     appendLine("   Manual troubleshooting may be required")
                                 }
                             }
-                            
+
                             return verifySuccess2
                         }
                     }
                     return false
                 }
-                
+
                 return verifySuccess
             }
 
@@ -1625,15 +1527,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Detects Termux UID, GID, and groups by reading packages.list
-     * and calculating standard Android supplementary groups.
-     */
     private fun detectTermuxIds() {
         Thread {
             try {
-                // Get Termux UID from packages.list
-                val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
+                val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep '^com\\.termux ' /data/system/packages.list"))
                 val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
                 val listExit = listProc.waitFor()
 
@@ -1641,7 +1538,6 @@ class MainActivity : AppCompatActivity() {
                     return@Thread
                 }
 
-                // Format: com.termux 10321 0 /data/user/0/com.termux ...
                 val parts = listOutput.trim().split("\\s+".toRegex())
                 if (parts.size < 2) {
                     return@Thread
@@ -1652,38 +1548,27 @@ class MainActivity : AppCompatActivity() {
                 termuxUid = termuxAppId.toString()
                 termuxGid = termuxAppId.toString()
 
-                // Calculate standard Android supplementary groups
-                // 3003 = inet (network access)
-                // 9997 = everybody
-                // 20000 + app_id = cache group
-                // 50000 + app_id = all group
-                val appId = termuxAppId - 10000  // Extract app number (e.g., 10321 -> 321)
+                val appId = termuxAppId - 10000
                 val supplementaryGroups = listOf(
-                    "3003",           // inet - network access
-                    "9997",           // everybody
-                    (20000 + appId).toString(),  // cache group (e.g., 20321)
-                    (50000 + appId).toString()   // all group (e.g., 50321)
+                    "3003",
+                    "9997",
+                    (20000 + appId).toString(),
+                    (50000 + appId).toString()
                 )
 
                 termuxGroups = supplementaryGroups.joinToString(" ") { "-G $it" }
             } catch (e: Exception) {
-                // Silent failure - will be caught later when trying to use these values
             }
         }.start()
     }
 
-    /**
-     * Ensures Termux IDs are detected. If not, attempts detection synchronously.
-     * Returns a pair: (success: Boolean, errorMessage: String?)
-     */
     private fun ensureTermuxIdsDetected(): Pair<Boolean, String?> {
         if (termuxUid.isNotEmpty() && termuxGid.isNotEmpty() && termuxGroups.isNotEmpty()) {
             return Pair(true, null)
         }
 
         try {
-            // Get Termux UID from packages.list
-            val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep com.termux /data/system/packages.list"))
+            val listProc = Runtime.getRuntime().exec(arrayOf("su", "-c", "grep '^com\\.termux ' /data/system/packages.list"))
             val listOutput = BufferedReader(InputStreamReader(listProc.inputStream)).use { it.readText() }
             val listError = BufferedReader(InputStreamReader(listProc.errorStream)).use { it.readText() }
             val listExit = listProc.waitFor()
@@ -1696,7 +1581,6 @@ class MainActivity : AppCompatActivity() {
                 return Pair(false, "Termux not found in packages.list. Is Termux installed?")
             }
 
-            // Format: com.termux 10321 0 /data/user/0/com.termux ...
             val parts = listOutput.trim().split("\\s+".toRegex())
             if (parts.size < 2) {
                 return Pair(false, "Invalid format in packages.list:\n$listOutput")
@@ -1710,17 +1594,12 @@ class MainActivity : AppCompatActivity() {
             termuxUid = termuxAppId.toString()
             termuxGid = termuxAppId.toString()
 
-            // Calculate standard Android supplementary groups
-            // 3003 = inet (network access)
-            // 9997 = everybody
-            // 20000 + app_id = cache group
-            // 50000 + app_id = all group
-            val appId = termuxAppId - 10000  // Extract app number (e.g., 10321 -> 321)
+            val appId = termuxAppId - 10000
             val supplementaryGroups = listOf(
-                "3003",           // inet - network access
-                "9997",           // everybody
-                (20000 + appId).toString(),  // cache group (e.g., 20321)
-                (50000 + appId).toString()   // all group (e.g., 50321)
+                "3003",
+                "9997",
+                (20000 + appId).toString(),
+                (50000 + appId).toString()
             )
 
             termuxGroups = supplementaryGroups.joinToString(" ") { "-G $it" }
@@ -1758,10 +1637,8 @@ class MainActivity : AppCompatActivity() {
         Thread {
             try {
                 val process = Runtime.getRuntime().exec(arrayOf("su", "-c", command))
-                val output =
-                    BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
-                val errorOutput =
-                    BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
+                val output = BufferedReader(InputStreamReader(process.inputStream)).use { it.readText() }
+                val errorOutput = BufferedReader(InputStreamReader(process.errorStream)).use { it.readText() }
                 val code = process.waitFor()
                 runOnUiThread {
                     textView.text = when {
