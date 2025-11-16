@@ -1,32 +1,48 @@
-1) Restrict Wifi Pineapple Access:
+1) Provision WiFi Pineapple Access Points:
 
-IMPORTANT: Ensure your open wifi network is disabled (http://172.16.42.1:1471/#/PineAP/open) and your WPA network is enabled with a secret password (http://172.16.42.1:1471/#/PineAP/aps). 
-a) This will ensure that only you have access to your wifi pineapple. Don't allow others to join your network without their explicit permission.
-b) You can also add your client MAC address to the client allow list (http://172.16.42.1:1471/#/PineAP/filtering) to add another layer of access control.
+a) Connect to the WiFi Pineapple Admin Portal at 172.16.42.1:1471
+
+b) Enable your "Evil WPA" Access Point (http://172.16.42.1:1471/#/PineAP/aps) with a secret password 
+
+c) Ensure your "Open" Access Point is disabled (http://172.16.42.1:1471/#/PineAP/open)
+
+(This will prevent unauthorized access to your WiFi Pineapple access point. For added security, add your MAC addresses to the allow list.)
 
 -------------------------------------------------------------------------------------------------------------
 2). Install "Evil Portal" on the WiFi Pineapple:
-a) Connect to the Admin Portal at 172.16.42.1:1471
-b) Connect to the Internet
+
+a) Connect to the Internet
     i.) Ethernet Connection: Connect ethernet cable to the wifi pineapple (using a USB adapter). Confirm under "Settings -> Networking -> Ethernet" that you have obtained an IP address from DHCP.
     ii.) WiFi Connection: (Settings > Networking > select the Client Mode Interface (under Wireless Client Mode) > click Scan  > select your AP > enter the Network Password > Click "Connect")
-c) Optional: Perform an internet speed test to measure bandwidth (download/upload speeds). (You can do this by connecting a client to the pineapple and visiting https://www.speedtest.net/)
-d) Click on "Modules & Packages" in the sidebar (the puzzle piece icon).
-e) Click the "Modules" tab.
-f) Click "Get Available Modules" (you may need to click it several times if you have a weak internet connection).
-g) Click "Install" next to the "Evil Portal" module.
-h) Click "Install" (you may need to click it several times if you have a weak internet connection).
-i) Click "Done" once the "Module Install[s] Successfully".
-j) Click the "Installed" tab. (if you're not already there).
-k) Click the "Pin" icon next to "Evil Portal" (to pin Evil Portal to the side bar).
-l) Click the "Evil Portal" icon in the side bar. 
-m) Wait for this screen: "Welcome to Evil Portal. Lets get started. You need to install some dependencies before you can use this module. This will make a request to the internet." (If you don't see this screen, do not proceed.)
-n) Click "Install Dependencies". (Wait until the dependencies are installed. You can open up a new tab to confirm that the process is finished.)
+
+b) Optional: Perform an internet speed test to measure bandwidth (download/upload speeds). (You can do this by connecting a client to the pineapple and visiting https://www.speedtest.net/)
+
+c) Click on "Modules & Packages" in the sidebar (the puzzle piece icon).
+
+d) Click the "Modules" tab.
+
+e) Click "Get Available Modules" (you may need to click it several times if you have a weak internet connection).
+
+f) Click "Install" next to the "Evil Portal" module.
+
+g) Click "Install" (you may need to click it several times if you have a weak internet connection).
+
+h) Click "Done" once the "Module Install[s] Successfully".
+
+i) Click the "Installed" tab. (if you're not already there).
+
+j) Click the "Pin" icon next to "Evil Portal" (to pin Evil Portal to the side bar).
+
+k) Click the "Evil Portal" icon in the side bar. 
+
+l) Wait for this screen: "Welcome to Evil Portal. Lets get started. You need to install some dependencies before you can use this module. This will make a request to the internet." (If you don't see this screen, do not proceed.)
+
+m) Click "Install Dependencies". (Wait until the dependencies are installed. You can open up a new tab to confirm that the process is finished.)
 
 * The web server will automatically start at next boot/startup
 
 -------------------------------------------------------------------------------------------------------------
-3. Create a New Captive Portal
+3. Create a New Captive Portal:
 
 a) Next to "Portal Library" click: "New Portal".
 
@@ -54,7 +70,7 @@ d) Confirm the Default Files were deleted
 root@mk7:~# ls /root/portals/Wordpress/
 
 -------------------------------------------------------------------------------------------------------------
-5. Download the Github Repository Web Root Files 
+5. Download the Github Repository Web Root Files:
 
 PS C:\Users\user\> wsl -d kali-linux
 ┏━(Message from Kali developers)
@@ -110,7 +126,7 @@ auth-relay-framework
 12 directories, 23 files
 
 -------------------------------------------------------------------------------------------------------------
-6. Ensure the Web Root files aren't corrupted (0 bytes) 
+6. Ensure the Web Root files aren't corrupted (0 bytes):
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user]
 └─$ ls -lah ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/*
@@ -128,7 +144,7 @@ auth-relay-framework
 -rwxrwxrwx 1 kali kali  129 Oct 12 10:33 ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/Wordpress.ep
 
 -------------------------------------------------------------------------------------------------------------
-7. Transfer the Web Root files to the EvilPortal source directory
+7. Transfer the Web Root files to the EvilPortal source directory:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ scp ./auth-relay-framework/Wordpress/captive-portal/setup/web-root/* root@172.16.42.1:/root/portals/Wordpress/
@@ -147,7 +163,7 @@ success.html                           100%  866   350.9KB/s   00:00
 Wordpress.ep                           100%  129    62.4KB/s   00:00
 
 -------------------------------------------------------------------------------------------------------------
-8. Download the Wordpress Static Format Files
+8. Download the Wordpress Static Format Files:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ mkdir wordpress
@@ -183,7 +199,7 @@ Wordpress.ep                           100%  129    62.4KB/s   00:00
 └─$ curl -s "https://wordpress.com/wp-includes/fonts/dashicons.eot" > wp-includes/fonts/dashicons.eot
 
 -------------------------------------------------------------------------------------------------------------
-9. Ensure the static format files are not corrupted (0 bytes)
+9. Ensure the static format files are not corrupted (0 bytes):
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
 └─$ ls -lahR wp-login.css wp-scripts.js images/ wp-includes/
@@ -212,7 +228,7 @@ drwxrwxrwx 1 kali kali 512 Oct 12 11:46 ..
 -rwxrwxrwx 1 kali kali 26K Oct 12 11:46 dashicons.woff2
 
 -------------------------------------------------------------------------------------------------------------
-10. Transfer the Wordpress Static Format Files to the EvilPortal source directory
+10. Transfer the Wordpress Static Format Files to the EvilPortal source directory:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
 └─$ scp -r wp-login.css wp-scripts.js images/ wp-includes/ root@172.16.42.1:/root/portals/Wordpress/
@@ -226,7 +242,7 @@ dashicons.ttf                          100%   55KB   1.6MB/s   00:00
 dashicons.woff2                        100%   26KB   1.3MB/s   00:00
 
 -------------------------------------------------------------------------------------------------------------
-11. Confirm all necessary files have been Transferred EvilPortal source directory
+11. Confirm all necessary files have been Transferred EvilPortal source directory:
 
 Run in Pineapple Shell:
 
@@ -257,7 +273,7 @@ root@mk7:~# find /root/portals/Wordpress/ | sed 's|[^/]*/|  |g'
         mfa_status.php
 
 -------------------------------------------------------------------------------------------------------------
-12. Deploy Portal and Confirm Activation
+12. Deploy Portal and Confirm Activation:
 
 a) Create symbolic links for the Evil Portal web root files
 
@@ -293,17 +309,17 @@ b) Refresh the EvilPortal module page to confirm the portal is now activated
 (You won't be able to preview the portal until the web server is started.)
 
 -------------------------------------------------------------------------------------------------------------
-13. SSH into the WiFi Pineapple to get a full TTY shell
+13. SSH into the WiFi Pineapple to get a full TTY shell:
 
 PS C:\Users\user> ssh root@172.16.42.1
 
 -------------------------------------------------------------------------------------------------------------
-14. Back Up the Current Nginx Config
+14. Back Up the Current Nginx Config:
 
 root@mk7:~# cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
 
 -------------------------------------------------------------------------------------------------------------
-15. Add location blocks inside the server block of the Nginx configuration file 
+15. Add location blocks inside the server block of the Nginx configuration file:
 
 root@mk7:~# vim /etc/nginx/nginx.conf
 
@@ -344,7 +360,7 @@ root@mk7:~# cat /etc/nginx/nginx.conf
 ```
 
 -------------------------------------------------------------------------------------------------------------
-16. Test Nginx and Reboot the Pineapple to Start the Web Server
+16. Test Nginx Configuration and Reboot the Pineapple to Start the Web Server:
 
 root@mk7:~/portals/Wordpress# nginx -t
 nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
@@ -353,7 +369,7 @@ nginx: configuration file /etc/nginx/nginx.conf test is successful
 root@mk7:~# reboot
 
 -------------------------------------------------------------------------------------------------------------
-17. Preview the Portal and Enable Evil Portal on Boot
+17. Confirm the Web Portal is started and Preview the Portal:
 
 a) Return to the Evil Portal module page (http://172.16.42.1:1471/#/Modules/evilportal)
 
@@ -365,7 +381,7 @@ Troubleshooting:
 - If the preview page is not formatted correctly, make sure the static Wordpress format files are not corrupted
 
 -------------------------------------------------------------------------------------------------------------
-18. Restricting internet access
+18. Restricting Internet Access:
 
 a) Click "Start"
 (This will create the /tmp/EVILPORTAL_CLIENTS.txt) (the "Allowed Clients" list)
