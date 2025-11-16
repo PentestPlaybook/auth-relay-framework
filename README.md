@@ -1,5 +1,3 @@
----
-
 # **Auth Relay Framework**
 
 ## ⚠️ IMPORTANT: Authorized Use Only
