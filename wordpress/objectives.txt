@@ -1,4 +1,4 @@
-Objective 1 - Set up the Wordpress Droplet:
+Objective 1 - Provision the Wordpress Droplet:
 a. Pre-requisites: A domain that you control with DNS settings available for assignment.
 b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/wordpress-droplet-setup.txt
 c. Resources: None
@@ -9,6 +9,6 @@ b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/ma
 c. Resources: [Web Root: https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/captive-portal/setup/web-root]
 
 Objective 3 - Deploy the App and Attack Simulation:
-a. Pre-requisites: A rooted Android phone + Connection to the Wifi Pineapple network.
+a. Pre-requisites: A rooted Android phone + Installed App + Connection to the Wifi Pineapple network.
 b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/android/setup/termux_setup.txt
 c. Resources: [App Source & Build Files: https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/android/setup/WordpressRelayApp]; [WordPress Relay Automation Script: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/android/execution/scripts/wordpress-relay.py]
