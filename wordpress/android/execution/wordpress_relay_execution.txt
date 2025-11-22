@@ -1,0 +1,30 @@
+1) WordpressRelayApp Android App:
+
+a) Tap button 1 to verify Termux is Set Up.
+(Note: If button 1 fails, ensure you completed the setup instructions in termux_setup.txt)
+
+b) Connect your android to the pineapple AP.
+(Note: Ensure your android shows an active Wi-Fi signal and your Pineapple has internet access)
+
+c) Tap button 2 to verify your android is connected to your pineapple.
+
+d) Tap button 3 to download wordpress-relay.py and establish SSH access to the Pineapple.
+(Note: Your Pineapple SSH Password is required for the initial setup) 
+
+e) Tap button 4 and enter your wordpress domain. Wait for the browser to open and connect to your WordPress site.
+(Note: If Button 4 fails, make sure your WordPress Droplet allows inbound traffic on port 443.)
+
+Troubleshooting: If any of these buttons fail, try tapping them again. If you just turned on your android, it may take some time for the drivers to initialize.
+
+-------------------------------------------------------------------------------------------------------------
+2) Client:
+
+a) Connect to the captive portal on 172.16.42.1
+(Note: If the captive portal does not load, ensure your client is connected to the pineapple AP.)
+
+b) Submit your Wordpress credentials / OTP code into the captive portal
+
+-------------------------------------------------------------------------------------------------------------
+3) Attack Simulation Success:
+
+a) Your Android device will log in to your WordPress account automatically. The client will be granted internet access.
