@@ -1,4 +1,4 @@
-1) Provision WiFi Pineapple Access Points:
+1) Enable "Evil WPA" Access Point:
 
 a) Connect to the WiFi Pineapple Admin Portal at 172.16.42.1:1471
 
