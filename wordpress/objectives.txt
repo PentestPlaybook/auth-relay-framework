@@ -1,14 +1,19 @@
 Objective 1 - Provision the Wordpress Droplet:
 a. Pre-requisites: A Digital Ocean account. A domain with DNS settings available for assignment.
-b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/wordpress-droplet-setup.txt
+b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/droplet/wordpress-droplet-setup.txt
 c. Resources: None
 
 Objective 2 - Configure the WiFi Pineapple:
 a. Pre-requisites: A WiFi Pineapple that has completed setup.
-b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/evilportal-setup.txt
-c. Resources: [Web Root: https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/captive-portal/setup/web-root]
+b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/pineapple/evilportal-setup.txt
+c. Resources: [Web Root: https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/captive-portal/setup/pineapple/web-root]
 
 Objective 3 - Deploy WordpressRelayApp and the Termux Environment:
 a. Pre-requisites: A rooted Android phone and connection to the Wifi Pineapple network.
-b. Instructions: [Termux Setup: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/android/setup/termux_setup.txt]; [WordpressRelayApp Setup: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/android/setup/WordpressRelayApp_setup.txt]
-c. Resources: [App Source & Build Files: https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/android/setup/WordpressRelayApp]; [WordPress Relay Automation Script: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/android/execution/scripts/wordpress-relay.py]
+b. Instructions: [Termux Setup: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/android/termux_setup.txt]; [WordpressRelayApp Setup: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/android/WordpressRelayApp_setup.txt]
+c. Resources: [App Source & Build Files: https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/captive-portal/setup/android/WordpressRelayApp]; 
+
+Objective 4 – Execute the WordPress Relay Attack Simulation:
+a. Pre-requisites: Completion of Objectives 1-3
+b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/execution/wordpress_relay_execution.txt
+c. Resources: [WordPress Relay Automation Script: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/android/execution/scripts/wordpress-relay.py]
