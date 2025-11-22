@@ -4,9 +4,9 @@ a) Connect to the WiFi Pineapple Admin Portal at 172.16.42.1:1471
 
 b) Enable your "Evil WPA" Access Point (http://172.16.42.1:1471/#/PineAP/aps) with a secret password 
 
-c) Ensure your "Open" Access Point is disabled (http://172.16.42.1:1471/#/PineAP/open)
+c) Ensure your "Open" Access Point is hidden (http://172.16.42.1:1471/#/PineAP/open)
 
-(This will prevent unauthorized access to your WiFi Pineapple access point. For added security, add your MAC addresses to the allow list.)
+(This will prevent unauthorized access to your access point. For added security, add your device's MAC address to the "Client Filter" allow list: http://172.16.42.1:1471/#/PineAP/filtering.)
 
 -------------------------------------------------------------------------------------------------------------
 2). Install "Evil Portal" on the WiFi Pineapple:
@@ -15,13 +15,13 @@ a) Connect to the Internet
     i.) Ethernet Connection: Connect ethernet cable to the wifi pineapple (using a USB adapter). Confirm under "Settings -> Networking -> Ethernet" that you have obtained an IP address from DHCP.
     ii.) WiFi Connection: (Settings > Networking > select the Client Mode Interface (under Wireless Client Mode) > click Scan  > select your AP > enter the Network Password > Click "Connect")
 
-b) Optional: Perform an internet speed test to measure bandwidth (download/upload speeds). (You can do this by connecting a client to the pineapple and visiting https://www.speedtest.net/)
+b) Optional: Perform an internet speed test to measure bandwidth (download/upload speeds). (You can do this by connecting a client to the access point and visiting https://www.speedtest.net/)
 
 c) Click on "Modules & Packages" in the sidebar (the puzzle piece icon).
 
 d) Click the "Modules" tab.
 
-e) Click "Get Available Modules" (you may need to click it several times if you have a weak internet connection).
+e) Click "Get Available Modules" (you may need to click it several times if you have weak internet connection).
 
 f) Click "Install" next to the "Evil Portal" module.
 
@@ -33,13 +33,11 @@ i) Click the "Installed" tab. (if you're not already there).
 
 j) Click the "Pin" icon next to "Evil Portal" (to pin Evil Portal to the side bar).
 
-k) Click the "Evil Portal" icon in the side bar. 
+k) Go to the Evil Portal module page (http://172.16.42.1:1471/#/Modules/evilportal)
 
-l) Wait for this screen: "Welcome to Evil Portal. Lets get started. You need to install some dependencies before you can use this module. This will make a request to the internet." (If you don't see this screen, do not proceed.)
+l) Wait for the "Welcome to Evil Portal ... Install Dependencies" screen. (If you don't see this screen, do not proceed.)
 
-m) Click "Install Dependencies". (Wait until the dependencies are installed. You can open up a new tab to confirm that the process is finished.)
-
-* The web server will automatically start at next boot/startup
+m) Click "Install Dependencies" and wait until the dependencies finish installation. (If you have a weak internet connection, open a new tab to confirm if the process finished.)
 
 -------------------------------------------------------------------------------------------------------------
 3. Create a New Captive Portal:
@@ -53,9 +51,10 @@ c) For "Portal Name", enter "Wordpress" and click "Done".
 (Note: You do not need to click "Activate". The captive portal will be activated later, during the setup process.) 
 
 -------------------------------------------------------------------------------------------------------------
-4. Delete the default EvilPortal configuration files from the EvilPortal source directory:
+4. Delete the default EvilPortal configuration files:
 
-a) Open the Terminal (in the top-right corner of the admin portal). (If you don’t see a prompt, click inside the shell and press Enter to refresh it.)
+a) Open the Terminal (in the top-right corner of the admin portal). 
+(If you don’t see a prompt, click inside the shell and press Enter to refresh it.)
 
 b) Confirm the Default Files were created
 
@@ -70,7 +69,7 @@ d) Confirm the Default Files were deleted
 root@mk7:~# ls /root/portals/Wordpress/
 
 -------------------------------------------------------------------------------------------------------------
-5. Download the Github Repository Web Root Files:
+5. Download the web-root files from the GitHub repository:
 
 PS C:\Users\user\> wsl -d kali-linux
 ┏━(Message from Kali developers)
@@ -244,8 +243,6 @@ dashicons.woff2                        100%   26KB   1.3MB/s   00:00
 -------------------------------------------------------------------------------------------------------------
 11. Confirm all necessary files have been Transferred EvilPortal source directory:
 
-Run in Pineapple Shell:
-
 root@mk7:~# find /root/portals/Wordpress/ | sed 's|[^/]*/|  |g'
         wp-scripts.js
         images
@@ -305,8 +302,9 @@ lrwxrwxrwx    1 root     root          35 Aug  4 21:40 wp-includes -> /root/port
 lrwxrwxrwx    1 root     root          36 Aug  4 21:40 wp-login.css -> /root/portals/Wordpress/wp-login.css
 lrwxrwxrwx    1 root     root          37 Aug  4 21:40 wp-scripts.js -> /root/portals/Wordpress/wp-scripts.js
 
+
 b) Refresh the EvilPortal module page to confirm the portal is now activated 
-(You won't be able to preview the portal until the web server is started.)
+(Note: You won't be able to preview the portal until the web server is started.)
 
 -------------------------------------------------------------------------------------------------------------
 13. SSH into the WiFi Pineapple to get a full TTY shell:
@@ -378,7 +376,7 @@ b) Confirm the Evil Portal "Web Server" is started
 c) Click "Preview" next to the Wordpress Portal (to confirm the login page renders correctly)
 Troubleshooting:
 - If you get a "403 Forbidden nginx/1.19.6" error, make sure you have installed the dependencies for Evil Portal
-- If the preview page is not formatted correctly, make sure the static Wordpress format files are not corrupted
+- If the page preview displays incorrectly, verify that the WordPress core static assets (CSS/JS files) are present and uncorrupted.
 
 -------------------------------------------------------------------------------------------------------------
 18. Restricting Internet Access:
