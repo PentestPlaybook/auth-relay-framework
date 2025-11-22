@@ -11,3 +11,7 @@ d) Click "Build -> Generate App Bundles or APKs -> Generate APKs"
 3) Transfer "C:\Users\user\Desktop\WordpressRelayApp\app\build\outputs\apk\debug\app-debug.apk" to your android, via Windows File Explorer.
 
 4) Install the app (app-debug.apk) on your android. 
+
+5) Open WordpressRelayApp and grant SuperUser Permissions.
+
+6) Click buttons 1-3 to verify the app dependencies and complete setup.
