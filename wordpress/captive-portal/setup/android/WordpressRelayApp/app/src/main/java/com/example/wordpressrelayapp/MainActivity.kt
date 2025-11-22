@@ -372,7 +372,7 @@ class MainActivity : AppCompatActivity() {
                         downloadLines.add("")
                         downloadLines.add("cd \"${'$'}HOME\"")
                         downloadLines.add("")
-                        downloadLines.add("wget -q https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/android/execution/scripts/wordpress-relay.py")
+                        downloadLines.add("wget -q https://raw.githubusercontent.com/PentestPlaybook/auth-relay-framework/refs/heads/main/wordpress/captive-portal/execution/wordpress-relay.py")
                         downloadLines.add("")
                         downloadLines.add("if [ -f wordpress-relay.py ]; then")
                         downloadLines.add("    echo 'DOWNLOAD:SUCCESS'")
