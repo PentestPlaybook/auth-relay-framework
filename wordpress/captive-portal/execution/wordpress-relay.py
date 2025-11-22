@@ -253,8 +253,10 @@ class MFAHandler:
 
             # Wait for OTP to be received
             print("⏳ Waiting for OTP (timeout: 300 seconds)...")
+            otp_start_time = time.time()
             if self.otp_received_event.wait(timeout=300):  # 5 minute timeout
-                print(f"✅ Got OTP: {self.received_otp}")
+                otp_wait_duration = time.time() - otp_start_time
+                print(f"✅ Got OTP: {self.received_otp} (waited {otp_wait_duration:.2f}s)")
 
                 # Fill each digit box with the corresponding digit
                 if len(self.received_otp) == 6:
@@ -284,26 +286,58 @@ class MFAHandler:
                     try:
                         validate_button = driver.find_element(By.ID, "mo2f_catchy_validate")
                         print("🚀 Found Validate button, clicking...")
+                        click_time = time.time()
                         validate_button.click()
 
-                        # Wait for the AJAX response and form submission
                         print("⏳ Waiting for MFA validation...")
-                        time.sleep(5)
+                        print(f"⏱️  Click happened at: {click_time}")
+                        time.sleep(1)  # Brief initial wait for page to respond
 
-                        # Check final result
-                        final_url = driver.current_url
-                        print(f"📍 Final URL after MFA: {final_url}")
+                        # Smart checking for both success AND failure
+                        validation_start = time.time()
+                        for attempt in range(5):  # Check 5 times over 2.5 seconds
+                            check_start = time.time()
+                            final_url = driver.current_url
+                            
+                            # Get visible text from the page (includes modal content)
+                            try:
+                                body_text = driver.find_element(By.TAG_NAME, "body").text
+                            except:
+                                body_text = ""
+                            
+                            print(f"🔍 Check #{attempt+1} at {time.time() - validation_start:.2f}s:")
+                            print(f"   URL: {final_url}")
+                            
+                            # Check for success
+                            if "wp-admin" in final_url:
+                                elapsed = time.time() - click_time
+                                print(f"✅ MFA VALIDATION SUCCESSFUL! (took {elapsed:.2f}s from click)")
+                                send_mfa_result("mfa_success")
+                                return True
+                            
+                            # Check for failure indicator in visible text (catches modal content)
+                            if "Attempts left" in body_text or "attempts left" in body_text.lower():
+                                elapsed = time.time() - click_time
+                                print(f"❌ MFA validation failed - 'Attempts left' detected (took {elapsed:.2f}s from click)")
+                                print("🔄 Starting new MFA attempt...")
+                                send_mfa_result("mfa_failed")
+                                return self.handle_mfa_process(driver, port)
+                            
+                            print(f"   No result yet, sleeping 0.5s (check took {time.time() - check_start:.3f}s)")
+                            time.sleep(0.5)
 
-                        if "wp-admin" in final_url:
-                            print("✅ MFA VALIDATION SUCCESSFUL!")
-                            send_mfa_result("mfa_success")
-                            return True
-                        else:
-                            print("❌ MFA validation failed - trying again...")
-                            print("🔍 Current page title:", driver.title)
-                            # Don't send mfa_failed yet - allow retry
-                            # Start a new MFA attempt cycle
-                            return self.handle_mfa_process(driver, port)
+                        # If we get here, timeout without clear result
+                        total_elapsed = time.time() - click_time
+                        print(f"❌ MFA validation unclear after {total_elapsed:.2f}s")
+                        print("🔍 Current page title:", driver.title)
+                        print("🔍 Current URL:", driver.current_url)
+                        print("🔍 Page body text (first 500 chars):")
+                        try:
+                            print(driver.find_element(By.TAG_NAME, "body").text[:500])
+                        except:
+                            print("(could not retrieve body text)")
+                        send_mfa_result("mfa_failed")
+                        return self.handle_mfa_process(driver, port)
 
                     except Exception as e:
                         print(f"❌ Could not find/click validate button: {e}")
@@ -311,17 +345,34 @@ class MFAHandler:
                         try:
                             print("🔄 Trying alternative submission...")
                             driver.execute_script("jQuery('#mo2f_catchy_validate').click();")
-                            time.sleep(5)
-
-                            final_url = driver.current_url
-                            if "wp-admin" in final_url:
-                                send_mfa_result("mfa_success")
-                                return True
-                            else:
-                                print("❌ Alternative submission failed - trying again...")
-                                return self.handle_mfa_process(driver, port)
+                            
+                            # Same smart checking for alternative method
+                            time.sleep(1)
+                            for attempt in range(5):  # Check 5 times over 2.5 seconds
+                                final_url = driver.current_url
+                                
+                                try:
+                                    body_text = driver.find_element(By.TAG_NAME, "body").text
+                                except:
+                                    body_text = ""
+                                
+                                if "wp-admin" in final_url:
+                                    send_mfa_result("mfa_success")
+                                    return True
+                                
+                                if "Attempts left" in body_text or "attempts left" in body_text.lower():
+                                    print("❌ Alternative submission failed - trying again...")
+                                    send_mfa_result("mfa_failed")
+                                    return self.handle_mfa_process(driver, port)
+                                
+                                time.sleep(0.5)
+                            
+                            print("❌ Alternative submission timeout")
+                            send_mfa_result("mfa_failed")
+                            return self.handle_mfa_process(driver, port)
                         except:
                             print("❌ Alternative submission failed")
+                            send_mfa_result("mfa_failed")
                             return self.handle_mfa_process(driver, port)
 
                 else:
@@ -335,6 +386,8 @@ class MFAHandler:
 
         except Exception as e:
             print(f"❌ MFA handling failed: {e}")
+            import traceback
+            traceback.print_exc()
             send_mfa_result("mfa_failed")
             return False
 
