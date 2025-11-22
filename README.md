@@ -103,17 +103,22 @@ With:
 * Modify Nginx handlers
 * Enable/activate the portal
 
-## **Objective 3 — Deploy Android Relay App + Automation**
+## **Objective 3 — Configure Termux and Deploy Android Relay App**
 
+* Install Termux and Termux:X11
 * Configure the Termux environment
-* Install and test the WordPress Relay Android App
-* Run the Python automation script to perform the relay
+* Build and Install the WordPress Relay Android App
+
+## **Objective 4 — Execute the WordPress Relay Attack Simulation**
+* Launch the relay workflow and spawn the browser session
+* Capture credentials/OTP via the captive portal
+* Verify automatic WordPress login + client internet release
 
 ---
 
 # **Full Deployment Instructions**
 
-Full Deployment Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/objectives.txt
+Full Deployment Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/objectives.txt
 
 ---
 
