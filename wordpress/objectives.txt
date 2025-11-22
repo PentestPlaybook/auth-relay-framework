@@ -16,4 +16,4 @@ c. Resources: [App Source & Build Files: https://github.com/PentestPlaybook/auth
 Objective 4 – Execute the WordPress Relay Attack Simulation:
 a. Pre-requisites: Completion of Objectives 1-3
 b. Instructions: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/execution/wordpress_relay_execution.txt
-c. Resources: [WordPress Relay Automation Script: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/android/execution/scripts/wordpress-relay.py]
+c. Resources: [WordPress Relay Automation Script: https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/execution/wordpress-relay.py]
