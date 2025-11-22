@@ -16,7 +16,7 @@ whoami
 ------------------------------------------------------------------------------------------------------------------------------------
 3. SSH Connect to Termux from your Host:
 
-cd C:\Users\user\Downloads\platform-tools-latest-windows\platform-tools
+cd C:\Users\[YOUR WINDOWS USERNAME]\Downloads\platform-tools-latest-windows\platform-tools
 .\adb forward tcp:8022 tcp:8022
 ssh -p 8022 u0_a###@localhost
 
