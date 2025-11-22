@@ -121,22 +121,52 @@ def attempt_login(driver, username, password, site, port):
         login_button = driver.find_element(By.NAME, "wp-submit")
         login_button.click()
 
-        # Wait for page to load
-        time.sleep(3)
+        print("⏳ Waiting for login response...")
+        login_start = time.time()
 
-        # Check login result
+        # Smart checking for login result (check up to 10 times = 5 seconds max)
+        login_result_detected = False
+        for attempt in range(10):
+            time.sleep(0.5)
+            current_url = driver.current_url
+            
+            # Check if we've been redirected to wp-admin (success, no MFA)
+            if "wp-admin" in current_url:
+                elapsed = time.time() - login_start
+                print(f"✅ Redirected to wp-admin in {elapsed:.2f}s (no MFA)")
+                login_result_detected = True
+                break
+            
+            # Check if MFA digit boxes appeared (success with MFA)
+            digit_inputs = []
+            for i in range(1, 7):
+                try:
+                    digit_input = driver.find_element(By.ID, f"mo2f-digit-{i}")
+                    digit_inputs.append(digit_input)
+                except:
+                    pass
+            
+            if len(digit_inputs) == 6:
+                elapsed = time.time() - login_start
+                print(f"✅ MFA page detected in {elapsed:.2f}s")
+                login_result_detected = True
+                break
+            
+            # Check for error message (failed login)
+            page_source = driver.page_source.lower()
+            if "incorrect username or password" in page_source or ("error" in page_source and current_url.endswith("wp-login.php")):
+                elapsed = time.time() - login_start
+                print(f"❌ Login failed detected in {elapsed:.2f}s")
+                login_result_detected = True
+                break
+            
+            print(f"   Check #{attempt+1}: Still waiting...")
+
+        # Now check login result
         current_url = driver.current_url
         page_source = driver.page_source.lower()
         print(f"📍 Current URL: {current_url}")
         print(f"🔍 Page title: {driver.title}")
-
-        # Debug: Check for specific content
-        if "wp-admin" in current_url:
-            print("🔍 DEBUG: Found 'wp-admin' in URL")
-        if "incorrect" in page_source:
-            print("🔍 DEBUG: Found 'incorrect' in page source")
-        if "error" in page_source:
-            print("🔍 DEBUG: Found 'error' in page source")
 
         # Look for the 6-digit input boxes (mo2f-digit-1 through mo2f-digit-6)
         digit_inputs = []
