@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------------------------------------------------------------
 1. Install Termux and X11:
 
-a) Install Termux from F-Droid App
+a) Install "Termux (Terminal Emulator with packages)" from F-Droid App
 b) Install Termux:X11 (Download from: https://github.com/termux/termux-x11/releases/download/nightly/app-arm64-v8a-debug.apk)
 
 ------------------------------------------------------------------------------------------------------------------------------------
