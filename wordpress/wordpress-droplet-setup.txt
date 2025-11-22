@@ -1,40 +1,74 @@
-1) Create the Wordpress Droplet:
+----------------------------------------------------------------------------------------------------------------------------------
+1) Create a Sendgrid Account:
+
+a) Go to: https://app.sendgrid.com/signup
+
+b) Click "Sign up now!".
+
+c) Complete the registration process.
+
+d) Make sure to download your recovery code.
+
+----------------------------------------------------------------------------------------------------------------------------------
+2) Configure DNS Records and Select your Email API Plan:
+
+a) Sign into your account.
+(If prompted, click: "Create new account" and "Proceed with new account")
+
+b) Enter your domain (the one you used when installing Wordpress) and click "next".
+
+c) Click "Setup Now" (under "Install DNS Records").
+
+d) Add the CNAME and TXT records with your DNS provider and then click "Next" in SendGrid.
+(If you get validation errors with the CNAME records, add only the subdomain part, before the @, for the host value) 
+
+e) Under "Select your Email API plan" and "Select your Marketing Campaigns plan", select: "60 day trial" and click "Next".
+
+----------------------------------------------------------------------------------------------------------------------------------
+3) Create an API Key and Save it to a Safe Location:
+
+a) At "https://app.sendgrid.com/" click "Settings", "API Keys" and "Create API Key".
+
+b) Name the API Key "Wordpress", Select "Full Access" and click "Create & View".
+
+c) Copy the API Key, save it somewhere safe, and click "Done".
+
+----------------------------------------------------------------------------------------------------------------------------------
+4) Create the Wordpress Droplet:
 
 a) Go to: https://marketplace.digitalocean.com/
 
 b) Search "Wordpress" in the search bar and click "Create Wordpress Droplet".
 
-c) Change the CPU to "Regular 2 GB / 1 CPU".
+c) Change the CPU to "Regular 1 GB / 1 CPU" (the lowest cost plan).
 
-d) Add a Public SSH Key and click "Create Droplet".
+d) Choose an SSH Key (this is required to create the droplet)
 
---------------------------------------------------------------------------------------------------------------------------
-2) Configure the Firewall for the Droplet:
-
-a) Allow inbound port 80 for all IPv4 and IPv6 addresses (necessary for SSL certificate issuance - we will change this later).
-
-b) Allow inbound ports 22, 443, for your host's public IP address only.
-
-c) Apply the Firewall to Your Wordpress Droplet
+e) Click "Create Droplet"
 
 --------------------------------------------------------------------------------------------------------------------------
-3) Configure DNS A Records with your DNS provider:
+5) Configure DNS A Records with your DNS provider:
 
-a) Add a DNS A Record (Name: @, Value: [Your Wordpress Droplet Public IP]).
+a) Copy the public IP of your digital ocean droplet
 
-b) Add a DNS A Record (Name: www, Value: [Your Wordpress Droplet Public IP]).
+b) Add a DNS A Record for the following Host: @
+
+c) Add a DNS A Record for the following Host: www
 
 --------------------------------------------------------------------------------------------------------------------------
-4) SSH into your digital ocean instance and configure Wordpress:
+6) Configure the Droplet:
 
-┌──(kali㉿host)-[~]
-└─$ ssh root@wordpress droplet ip
+a) Open your Digital Ocean Droplet
+
+b) Click "Console" (right below the ON/OFF button)
+
+c) Configure Wordpress and SSL:
 
 ********************************************************************************
 Welcome to DigitalOcean's One-Click WordPress Droplet.
 
 Domain/Subdomain name: your-real-domain.info
-(The same domain you configured the DNS records on)
+(Enter the domain you configured the DNS records on)
 
 Your Email Address: your-real-email@gmail.com
 (This needs to be your real email, so you can receive the 2FA code)
@@ -43,7 +77,7 @@ Username: wpadmin
 (Change this if you'd like)
 
 Password: MyPassword123
-(Change this to prevent unauthorized access to your Wordpress application. Don't reuse a real password!)
+(Change this to prevent unauthorized access to your Wordpress application. This is especially important since we didn't add firewall rules. Don't reuse a real password!)
 
 Blog Title: test-blog
 (Change this if you'd like)
@@ -80,6 +114,7 @@ Requesting a certificate for your-real-domain.info and www.your-real-domain.info
 
 Installation complete. Access your new WordPress site in a browser to continue.
 
+
 TROUBLESHOOTING:
 If you get the error: "Certbot failed to authenticate some domains", make sure:
 1) DNS A records were properly set for "@" and "www",
@@ -89,12 +124,7 @@ If you get the error: "Certbot failed to authenticate some domains", make sure:
 Then run "sudo certbot --apache" to retry SSL configuration.
 
 ----------------------------------------------------------------------------------------------------------------------------------
-5) Limit SSH, HTTP, and HTTPS access in the Firewall:
-
-Restrict inbound port 80 in the Digital Ocean Firewall to only your host's public IP address.
-
-----------------------------------------------------------------------------------------------------------------------------------
-6) Install mini-orange:
+7) Install mini-orange:
 
 root@digital-ocean-hostname:~# cd /var/www/html
 
@@ -103,12 +133,12 @@ root@digital-ocean-hostname:/var/www/html# ls -1
 root@digital-ocean-hostname:/var/www/html# sudo -u www-data wp plugin install miniorange-2-factor-authentication --activate
 
 ----------------------------------------------------------------------------------------------------------------------------------
-7) Configure mini-orange:
+8) Configure mini-orange:
 
 a) Connect to your Wordpress site at: https://your-real-domain.info/wp-login.php
-(If the site does not load, verify that your DNS A records point to your Droplet’s public IP and that DNS propagation has completed. You may also try accessing the site in a private browsing window.)
+(If the site does not load, verify that your DNS A records point to your Droplet’s public IP and that DNS propagation has completed. You can also try accessing the site in a private browsing window. There may be a short wait before the application is available.)
 
-b) Login to the Wordpress Application using the username and password that you set during deployment.
+b) Login to the Wordpress Application using the username and password that you set during deployment of the droplet.
 (If the login fails, you can reset your password with this command: "wp user update wpadmin --user_pass=[Enter your new password here] --path=/var/www/html --allow-root")
 
 c) Click "Let's get started!" in the mini orange 2FA setup wizard.
@@ -122,49 +152,14 @@ f) Select "Users should be directly enforced for 2FA setup." and click "All Done
 g) Click "Advance Settings" [sic].
 
 ----------------------------------------------------------------------------------------------------------------------------------
-8) Create a Sendgrid Account:
-
-a) Go to: https://app.sendgrid.com/signup
-
-b) Click "Sign up now!".
-
-c) Complete the registration process.
-
-d) Make sure to download your recovery code.
-
-----------------------------------------------------------------------------------------------------------------------------------
-9) Configure DNS Records and Select your Email API Plan:
-
-a) Sign into your account.
-(If prompted, click: "Create new account" and "Proceed with new account")
-
-b) Enter your domain (the one you used when installing Wordpress) and click "next".
-
-c) Click "Setup Now" (under "Install DNS Records").
-
-d) Add the CNAME and TXT records with your DNS provider and then click "Next" in SendGrid.
-(If you get validation errors with the CNAME records, add only the subdomain part, before the @, for the host value) 
-
-e) Under "Select your Email API plan" and "Select your Marketing Campaigns plan", select: "60 day trial" and click "Next".
-
-----------------------------------------------------------------------------------------------------------------------------------
-10) Create an API Key and Save it to a Safe Location:
-
-a) At "https://app.sendgrid.com/" click "Settings", "API Keys" and "Create API Key".
-
-b) Name the API Key "Wordpress", Select "Full Access" and click "Create & View".
-
-c) Copy the API Key, save it somewhere safe, and click "Done".
-
-----------------------------------------------------------------------------------------------------------------------------------
-11) Install WP Mail SMTP:
+9) Install WP Mail SMTP:
 
 root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp plugin install wp-mail-smtp --activate
 
 (If activation fails, ensure you are still in /var/www/html)
 
 ----------------------------------------------------------------------------------------------------------------------------------
-12) Tell WP Mail SMTP to use SendGrid:
+10) Tell WP Mail SMTP to use SendGrid:
 
 root@digital-ocean-hostname:~/var/www/html# sudo -u www-data wp option update wp_mail_smtp --format=json <<'JSON'
 {
@@ -184,7 +179,7 @@ JSON
 (Make sure to replace the "api_key" value with your Sendgrid API Key, and the "from_email" value with "admin@[Your Wordpress Domain]".)
 
 ----------------------------------------------------------------------------------------------------------------------------------
-13) Send a Test Email:
+11) Send a Test Email and Confirm it was Received:
 
 root@digital-ocean-hostname:/var/www/html# sudo -u www-data wp eval '                                                   
 wp_mail(
@@ -196,10 +191,11 @@ wp_mail(
 
 (Make sure to replace "your-real-email@gmail.com" with your real email address.)
 
+
 Check your email to confirm the message was received.
 
 ----------------------------------------------------------------------------------------------------------------------------------
-14) Set up 2FA for the "target" user:
+12) Set up 2FA for the Wordpress Admin:
 
 a) Log out and back in to Wordpress.
 
@@ -207,22 +203,4 @@ b) Under "Configure a Two-Factor method to protect your account" select "OTP Ove
 
 c) Enter the 2FA code sent to your email.
 
-d) Click "Download Codes" to download your recovery codes.
-
-e) Click "Finish Setup".
-
-f) Click "miniOrange 2-Factor" in the menu sidebar to verify how many emails you have left (in the top right corner).
-
-----------------------------------------------------------------------------------------------------------------------------------
-15) Transfer the recovery codes to your host using scp tool:
-
-┌──(kali㉿kali)-[~]
-└─$ sudo systemctl start ssh      
-                                                                                                                                                                         
-┌──(kali㉿kali)-[~]
-└─$ ls Downloads
-miniOrange2-factor-BackupCodes.txt
-
-PS C:\Users\user\Documents> scp kali@<your kali ip>:/home/kali/Downloads/miniOrange2-factor-BackupCodes.txt .
-kali@<your kali ip>'s password:
-miniOrange2-factor-BackupCodes.txt                                                    100%  358   349.6KB/s   00:00
+d) Click "miniOrange 2-Factor" in the menu sidebar to verify how many emails you have left (in the top right corner).
