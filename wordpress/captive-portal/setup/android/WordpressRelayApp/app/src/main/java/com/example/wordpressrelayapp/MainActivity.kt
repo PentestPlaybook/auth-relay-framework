@@ -661,7 +661,7 @@ class MainActivity : AppCompatActivity() {
             }.start()
         }
 
-        button4.setOnClickListener {
+button4.setOnClickListener {
             textView.text = "Loading last URL..."
 
             Thread {
@@ -1053,156 +1053,165 @@ class MainActivity : AppCompatActivity() {
                                         }
 
                                         val pipeline = "cat $SD_SCRIPT | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                                        val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
+                                        Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
 
-                                        val stdout = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-                                        val stderr = BufferedReader(InputStreamReader(proc.errorStream)).use { it.readText() }
-                                        val exit = proc.waitFor()
+                                        // Delete old python_output.log before starting
+                                        val deleteLogScript = """
+                                            #!/data/data/com.termux/files/usr/bin/bash
+                                            export HOME=/data/data/com.termux/files/home
+                                            export PREFIX=/data/data/com.termux/files/usr
+                                            export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+                                            cd "${'$'}HOME"
+                                            rm -f python_output.log
+                                            echo "DELETED"
+                                        """.trimIndent()
+
+                                        val deleteLogScriptPath = "/sdcard/delete_python_log.sh"
+                                        writeFileAsRoot(deleteLogScriptPath, deleteLogScript)
+                                        execAsRoot("chmod 644 $deleteLogScriptPath")
+
+                                        val deletePipeline = "cat $deleteLogScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                                        val deleteProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", deletePipeline))
+                                        deleteProc.waitFor()
+
+                                        // Don't wait for process - let it run in background
+                                        runOnUiThread {
+                                            textView.text = "🚀 Services starting...\n⏳ Waiting for Python output log at:\n/data/data/com.termux/files/home/python_output.log\n\n"
+                                        }
 
                                         Thread.sleep(1500)
 
-                                        val readLogsScript = mutableListOf<String>()
-                                        readLogsScript.add("#!/data/data/com.termux/files/usr/bin/bash")
-                                        readLogsScript.add("set -e")
-                                        readLogsScript.add("")
-                                        readLogsScript.add("export HOME=/data/data/com.termux/files/home")
-                                        readLogsScript.add("export PREFIX=/data/data/com.termux/files/usr")
-                                        readLogsScript.add("export PATH=\"${'$'}PREFIX/bin:${'$'}PATH\"")
-                                        readLogsScript.add("")
-                                        readLogsScript.add("cd \"${'$'}HOME\"")
-                                        readLogsScript.add("")
-                                        readLogsScript.add("echo '=== X11_OUTPUT_LOG ==='")
-                                        readLogsScript.add("cat x11_output.log 2>/dev/null || echo 'File not found'")
-                                        readLogsScript.add("echo ''")
-                                        readLogsScript.add("echo '=== CLEANUP_LOG ==='")
-                                        readLogsScript.add("cat cleanup.log 2>/dev/null || echo 'File not found'")
-                                        readLogsScript.add("echo ''")
-                                        readLogsScript.add("echo '=== ENV_CHECK_LOG ==='")
-                                        readLogsScript.add("cat env_check.log 2>/dev/null || echo 'File not found'")
-                                        readLogsScript.add("echo ''")
-                                        readLogsScript.add("echo '=== GECKODRIVER_LOG ==='")
-                                        readLogsScript.add("tail -200 geckodriver.log 2>/dev/null || echo 'File not found'")
-                                        readLogsScript.add("echo ''")
-                                        readLogsScript.add("echo '=== PYTHON_OUTPUT_LOG ==='")
-                                        readLogsScript.add("tail -200 python_output.log 2>/dev/null || echo 'File not found'")
-                                        readLogsScript.add("echo ''")
-                                        readLogsScript.add("echo '=== SSH_SETUP_LOG ==='")
-                                        readLogsScript.add("cat ssh_setup.log 2>/dev/null || echo 'File not found'")
-                                        readLogsScript.add("echo ''")
-                                        readLogsScript.add("echo '=== SSH_FORWARD1_LOG ==='")
-                                        readLogsScript.add("tail -200 ssh_forward1.log 2>/dev/null || echo 'File not found'")
-                                        readLogsScript.add("echo ''")
-                                        readLogsScript.add("echo '=== SSH_FORWARD2_LOG ==='")
-                                        readLogsScript.add("tail -200 ssh_forward2.log 2>/dev/null || echo 'File not found'")
+                                        // Wait for python_output.log to be created (with timeout)
+                                        val logPath = "$TERMUX_HOME/python_output.log"
+                                        var logExists = false
+                                        val maxWaitSeconds = 60
+                                        val startTime = System.currentTimeMillis()
 
-                                        val readLogsScriptContent = readLogsScript.joinToString("\n")
-                                        val readLogsScriptPath = "/sdcard/read_logs.sh"
-                                        writeFileAsRoot(readLogsScriptPath, readLogsScriptContent)
-                                        execAsRoot("chmod 644 $readLogsScriptPath")
+                                        while (!logExists && (System.currentTimeMillis() - startTime) < maxWaitSeconds * 1000) {
+                                            val elapsed = (System.currentTimeMillis() - startTime) / 1000
+                                            
+                                            // Use the same method as readUrlScript to check for file
+                                            val checkFileScript = """
+                                                #!/data/data/com.termux/files/usr/bin/bash
+                                                export HOME=/data/data/com.termux/files/home
+                                                export PREFIX=/data/data/com.termux/files/usr
+                                                export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+                                                cd "${'$'}HOME"
+                                                if [ -f python_output.log ]; then
+                                                    echo "FILE_EXISTS"
+                                                else
+                                                    echo "FILE_NOT_FOUND"
+                                                fi
+                                            """.trimIndent()
 
-                                        val readPipeline = "cat $readLogsScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-                                        val readProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", readPipeline))
-                                        val allLogs = BufferedReader(InputStreamReader(readProc.inputStream)).use { it.readText() }
-                                        readProc.waitFor()
+                                            val checkFileScriptPath = "/sdcard/check_python_log.sh"
+                                            writeFileAsRoot(checkFileScriptPath, checkFileScript)
+                                            execAsRoot("chmod 644 $checkFileScriptPath")
 
-                                        fun section(after: String, before: String? = null): String {
-                                            val a = allLogs.substringAfter(after, "")
-                                            return if (before == null) a.trim()
-                                            else a.substringBefore(before, "").trim()
-                                        }
-
-                                        val x11LogContent = section("=== X11_OUTPUT_LOG ===", "=== CLEANUP_LOG ===")
-                                        val cleanupLogContent = section("=== CLEANUP_LOG ===", "=== ENV_CHECK_LOG ===")
-                                        val envCheckLogContent = section("=== ENV_CHECK_LOG ===", "=== GECKODRIVER_LOG ===")
-                                        val geckodriverLogContent = section("=== GECKODRIVER_LOG ===", "=== PYTHON_OUTPUT_LOG ===")
-                                        val pythonLogContent = section("=== PYTHON_OUTPUT_LOG ===", "=== SSH_SETUP_LOG ===")
-                                        val sshSetupLogContent = section("=== SSH_SETUP_LOG ===", "=== SSH_FORWARD1_LOG ===")
-                                        val sshForward1LogContent = section("=== SSH_FORWARD1_LOG ===", "=== SSH_FORWARD2_LOG ===")
-                                        val sshForward2LogContent = section("=== SSH_FORWARD2_LOG ===")
-
-                                        val sshOk = sshSetupLogContent.contains("SSH_SETUP_SUCCESS")
-                                        val x11Ok = x11LogContent.contains("listening on TCP port 6000") ||
-                                                x11LogContent.contains("✓ X11 listening")
-                                        val geckoOk = geckodriverLogContent.contains("Listening on 127.0.0.1:4444") ||
-                                                x11LogContent.contains("Geckodriver PID:")
-                                        val allPortsReady = sshSetupLogContent.contains("All required ports are listening")
-
-                                        val overallSuccess = (exit == 0) && sshOk && x11Ok && geckoOk && allPortsReady
-
-                                        runOnUiThread {
-                                            textView.text = buildString {
-                                                if (overallSuccess) {
-                                                    appendLine("✅ Complete Setup Finished (Button 4)")
-                                                } else {
-                                                    appendLine("⚠️ Setup finished with issues (Button 4)")
-                                                }
-                                                appendLine("Domain: $domain")
-                                                appendLine("Saved to: $TERMUX_HOME/last-url.txt")
-                                                appendLine("Exit: $exit")
-                                                appendLine("")
-                                                if (!allPortsReady) appendLine("• Required ports: ❌ not all confirmed listening")
-                                                else appendLine("• Required ports: ✅ all confirmed listening (via nc)")
-                                                if (!sshOk) appendLine("• SSH tunnels: ❌ not established")
-                                                else appendLine("• SSH tunnels: ✅ established")
-                                                if (!x11Ok) appendLine("• X11: ❌ not confirmed listening on TCP :6000")
-                                                else appendLine("• X11: ✅ listening on TCP :6000")
-                                                if (!geckoOk) appendLine("• Geckodriver: ❌ not confirmed")
-                                                else appendLine("• Geckodriver: ✅ running")
-                                                appendLine("")
-                                                if (stdout.isNotBlank()) appendLine("--- STDOUT ---\n$stdout\n")
-                                                if (stderr.isNotBlank()) appendLine("--- STDERR ---\n$stderr\n")
-                                                appendLine("=== X11 & Service Logs ===")
-                                                appendLine(x11LogContent.ifBlank { "(no x11_output.log)" })
-                                                appendLine("\n=== Cleanup Log ===")
-                                                appendLine(cleanupLogContent.ifBlank { "(no cleanup.log)" })
-                                                appendLine("\n=== Environment Check ===")
-                                                appendLine(envCheckLogContent.ifBlank { "(no env_check.log)" })
-                                                appendLine("\n=== Geckodriver Log (last 200 lines) ===")
-                                                appendLine(geckodriverLogContent.ifBlank { "(no geckodriver.log)" })
-                                                appendLine("\n=== Python Output (last 200 lines) ===")
-                                                appendLine(pythonLogContent.ifBlank { "(no python_output.log)" })
-                                                appendLine("\n=== SSH Port Forward Setup (ssh_setup.log) ===")
-                                                appendLine(sshSetupLogContent.ifBlank { "(no ssh_setup.log)" })
-                                                appendLine("\n=== ssh_forward1.log (last 200 lines) ===")
-                                                appendLine(sshForward1LogContent.ifBlank { "(no ssh_forward1.log)" })
-                                                appendLine("\n=== ssh_forward2.log (last 200 lines) ===")
-                                                appendLine(sshForward2LogContent.ifBlank { "(no ssh_forward2.log)" })
-                                                appendLine("\nLogs are in $TERMUX_HOME")
-                                                when {
-                                                    overallSuccess -> appendLine("\n✅ All services and SSH tunnels are up. Preparing to switch to Termux:X11…")
-                                                    exit == 2 -> appendLine("\n❌ SSH tunnels failed. Stay in app to review logs.")
-                                                    sshSetupLogContent.contains("PORTS_NOT_READY") -> appendLine("\n❌ Required ports did not become ready in time. Stay in app to review logs.")
-                                                    else -> appendLine("\n⚠️ Not all checks passed. Stay in app to review logs.")
-                                                }
-                                            }.trim()
-                                        }
-
-                                        if (overallSuccess) {
-                                            try {
-                                                Handler(Looper.getMainLooper()).postDelayed({
-                                                    try {
-                                                        val x11Launch = packageManager.getLaunchIntentForPackage("com.termux.x11")
-                                                            ?: Intent().apply {
-                                                                setClassName("com.termux.x11", "com.termux.x11.MainActivity")
-                                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                                            }
-                                                        startActivity(x11Launch)
-                                                    } catch (e: ActivityNotFoundException) {
-                                                        runOnUiThread {
-                                                            textView.append("\n\n⚠️ Termux:X11 not installed; cannot switch automatically.")
-                                                        }
-                                                    } catch (e: Exception) {
-                                                        runOnUiThread {
-                                                            textView.append("\n\n⚠️ Failed to launch Termux:X11: ${e.message}")
-                                                        }
-                                                    }
-                                                }, 900L)
-                                            } catch (e: Exception) {
+                                            val checkPipeline = "cat $checkFileScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                                            val checkProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", checkPipeline))
+                                            val checkOutput = BufferedReader(InputStreamReader(checkProc.inputStream)).use { it.readText() }
+                                            checkProc.waitFor()
+                                            
+                                            if (checkOutput.trim() == "FILE_EXISTS") {
+                                                logExists = true
                                                 runOnUiThread {
-                                                    textView.append("\n\n⚠️ Delayed launch error: ${e.message}")
+                                                    textView.append("\n✅ File detected after ${elapsed}s!\n")
                                                 }
+                                            } else {
+                                                if (elapsed % 5 == 0L) {  // Update every 5 seconds
+                                                    runOnUiThread {
+                                                        textView.append("Still waiting... ${elapsed}s elapsed\n")
+                                                    }
+                                                }
+                                                Thread.sleep(1000)
                                             }
                                         }
+
+                                        if (!logExists) {
+                                            runOnUiThread {
+                                                textView.append("\n❌ Python output log not created after $maxWaitSeconds seconds\n\n" +
+                                                        "Services may still be starting. Check manually:\n" +
+                                                        "tail -f ~/python_output.log")
+                                            }
+                                            return@Thread
+                                        }
+
+                                        runOnUiThread {
+                                            textView.text = "✅ Python is ready! Streaming output...\n\n"
+                                        }
+
+                                        // Monitor python_output.log for browser spawning and successful connection
+                                        var shouldLaunchX11 = false
+                                        val monitorThread = Thread {
+                                            try {
+                                                val tailScript = """
+                                                    #!/data/data/com.termux/files/usr/bin/bash
+                                                    export HOME=/data/data/com.termux/files/home
+                                                    export PREFIX=/data/data/com.termux/files/usr
+                                                    export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+                                                    cd "${'$'}HOME"
+                                                    tail -f python_output.log
+                                                """.trimIndent()
+
+                                                val tailScriptPath = "/sdcard/tail_python_log.sh"
+                                                writeFileAsRoot(tailScriptPath, tailScript)
+                                                execAsRoot("chmod 644 $tailScriptPath")
+
+                                                val tailPipeline = "cat $tailScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                                                val tailProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", tailPipeline))
+                                                val reader = BufferedReader(InputStreamReader(tailProc.inputStream))
+                                                
+                                                val outputBuffer = StringBuilder()
+                                                reader.use { input ->
+                                                    var line: String?
+                                                    while (input.readLine().also { line = it } != null) {
+                                                        outputBuffer.append(line).append("\n")
+                                                        
+                                                        // Check for browser spawn and successful connection
+                                                        if (!shouldLaunchX11 && 
+                                                            outputBuffer.contains("Firefox is ready! Waiting for login requests")) {
+                                                            shouldLaunchX11 = true
+                                                            
+                                                            // Launch Termux:X11
+                                                            Handler(Looper.getMainLooper()).post {
+                                                                try {
+                                                                    val x11Launch = packageManager.getLaunchIntentForPackage("com.termux.x11")
+                                                                        ?: Intent().apply {
+                                                                            setClassName("com.termux.x11", "com.termux.x11.MainActivity")
+                                                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                                        }
+                                                                    startActivity(x11Launch)
+                                                                } catch (e: ActivityNotFoundException) {
+                                                                    // Silently fail - X11 not installed
+                                                                } catch (e: Exception) {
+                                                                    // Silently fail
+                                                                }
+                                                            }
+                                                        }
+                                                        
+                                                        // Update UI with latest output
+                                                        runOnUiThread {
+                                                            textView.text = outputBuffer.toString()
+                                                            // Auto-scroll to bottom
+                                                            val scrollView = textView.parent as? android.widget.ScrollView
+                                                            scrollView?.post {
+                                                                scrollView.fullScroll(android.view.View.FOCUS_DOWN)
+                                                            }
+                                                        }
+                                                        
+                                                        // Optional: limit buffer size to prevent memory issues
+                                                        if (outputBuffer.length > 50000) {
+                                                            // Keep only last 40000 characters
+                                                            outputBuffer.delete(0, outputBuffer.length - 40000)
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                // Log monitoring failed
+                                            }
+                                        }
+                                        monitorThread.start()
 
                                     } catch (e: Exception) {
                                         runOnUiThread { textView.text = "Error: ${e.message}\n${e.stackTraceToString()}" }
