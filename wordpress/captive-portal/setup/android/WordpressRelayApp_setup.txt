@@ -1,6 +1,6 @@
 1) Download and stage the WordPress Relay App source code:
 a) git clone https://github.com/PentestPlaybook/auth-relay-framework.git
-b) cp -r auth-relay-framework/wordpress/captive-portal/setup/android/WordpressRelayApp /mnt/c/users/user/Desktop/WordpressRelayApp
+b) cp -r auth-relay-framework/wordpress/captive-portal/setup/android/WordpressRelayApp /mnt/c/users/[YOUR WINDOWS USERNAME]/Desktop/WordpressRelayApp
 
 2) Sync and build the WordPress Relay App project in Android Studio:
 a) Open Android Studio
@@ -8,7 +8,7 @@ b) Open the WordpressRelayApp project
 c) Click "File -> Sync Project with Gradle Files"
 d) Click "Build -> Generate App Bundles or APKs -> Generate APKs"
 
-3) Transfer "C:\Users\user\Desktop\WordpressRelayApp\app\build\outputs\apk\debug\app-debug.apk" to your android, via Windows File Explorer.
+3) Transfer "C:\Users\[YOUR WINDOWS USERNAME]\Desktop\WordpressRelayApp\app\build\outputs\apk\debug\app-debug.apk" to your android, via Windows File Explorer.
 
 4) Install the app (app-debug.apk) on your android. 
 
