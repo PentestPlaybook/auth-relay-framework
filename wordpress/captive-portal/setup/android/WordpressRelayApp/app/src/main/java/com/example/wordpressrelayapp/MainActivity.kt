@@ -900,7 +900,7 @@ class MainActivity : AppCompatActivity() {
                                             fi
 
                                             echo "Starting Python relay with domain: $domain..." >> x11_output.log
-                                            python "${'$'}HOME/wordpress-relay.py" --domain $domain --port 8080 > python_output.log 2>&1 &
+                                            python -u "${'$'}HOME/wordpress-relay.py" --domain $domain --port 8080 > python_output.log 2>&1 &
                                             PYTHON_PID=${'$'}!
 
                                             echo "=== All processes started ===" >> x11_output.log
