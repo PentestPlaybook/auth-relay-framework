@@ -1,52 +1,63 @@
-1) Create an Access Point and Connect your Client
+1) Prepare the Simulated Access Point
 
-a) Connect your client to an access point that is using the same ESSID and passphrase as the "Evil WPA" Access Point on the Pineapple.
+a) Power off your WiFi Pineapple.
 
-b) You can use this script to create an access point in Kali: https://github.com/PentestPlaybook/wpa2-setup-and-hacking/blob/main/wpa2-setup.sh
+b) Create a Kali access point using the same ESSID and passphrase as the Pineapple’s Evil WPA AP:
+https://github.com/PentestPlaybook/wpa2-setup-and-hacking/blob/main/wpa2-setup.sh
 
-c) Connect your client to this access point and verify the Wi-Fi symbol is displayed, confirming the connection is active.
+c) Connect your client to the Kali AP and verify the Wi-Fi icon is displayed, confirming an active connection.
 
--------------------------------------------------------------------------------------------------------------
-2) WiFi Pineapple (Evil Portal):
-
-a) Boot your WiFi Pineapple and navigate to Evil Portal (http://172.16.42.1:1471/#/Modules/evilportal)
-
-b) Add your Android's private IP to the "Allowed Clients" list on Evil Portal
+d) Select the Kali AP in your deauth tool now (before the Pineapple boots and creates an identical AP).
 
 -------------------------------------------------------------------------------------------------------------
-3) WordpressRelayApp Android App:
+2) Boot the WiFi Pineapple and Configure Evil Portal:
 
-a) Tap button 1 in WordpressRelayApp to verify Termux is Set Up.
+a) Power on the WiFi Pineapple and navigate to Evil Portal (http://172.16.42.1:1471/#/Modules/evilportal).
+
+b) Connect your Android device to the Pineapple's Evil WPA AP.
+
+c) Add your Android Device's private IP to the "Allowed Clients" list in Evil Portal.
+
+d) Toggle your Android Device's Wi-Fi off and on.
+
+e) Verify the Wi-Fi icon is displayed, confirming an active connection.
+
+-------------------------------------------------------------------------------------------------------------
+3) Prepare the Wordpress Relay Automation:
+
+a) Tap Button 1 in WordpressRelayApp to verify Termux is set up.
 (Note: If button 1 fails, ensure you completed the setup instructions in termux_setup.txt)
 
-b) Connect your android to the pineapple AP.
-(Note: Ensure your android shows an active Wi-Fi signal and your Pineapple has internet access)
+b) Connect your Android device to the Pineapple AP.
+(Note: Ensure the Wi-Fi icon is visible and the Pineapple has internet access.)
 
-c) Tap button 2 in WordpressRelayApp to verify your android is connected to your pineapple.
+c) Tap Button 2 in WordpressRelayApp to verify your Android Device is connected to your pineapple.
 
-d) Tap button 3 in WordpressRelayApp to download wordpress-relay.py and establish SSH access to the Pineapple.
+d) Tap Button 3 in WordpressRelayApp to download wordpress-relay.py and establish SSH access to the Pineapple.
 (Note: Your Pineapple SSH Password is required for the initial setup) 
 
-e) Tap button 4 in WordpressRelayApp and enter your wordpress domain. Wait for the browser to open and connect to your WordPress site.
+e) Tap Button 4 in WordpressRelayApp and enter your Wordpress domain. Wait for the browser to open and connect to your WordPress site.
 (Note: If Button 4 fails, make sure your WordPress Droplet allows inbound traffic on port 443.)
 
 Troubleshooting: 
-1) If a button doesn’t work the first time, tap it again.
+1) If a button fails on the first attempt, tap it again.
 2) If you just booted your Android device, wait a moment for all services/drivers to finish loading.
-3) If Button 4 fails several times in a row, restart your Android device.
+3) If Button 4 fails repeatedly, restart your Android device.
 
 -------------------------------------------------------------------------------------------------------------
-4) Client:
+4) Execute the Client Capture:
 
-a) Deauthenticate your AP to force your client to disconnect
+a) Deauthenticate the Kali AP to force the client to disconnect.
 
-b) Your client should automatically connect to the captive portal on 172.16.42.1
+b) The client should automatically connect to the Pineapple’s Evil WPA AP.
 
-c) Submit your Wordpress credentials / OTP code into the captive portal.
+c) Upon connection, the client will be redirected to the captive portal at 172.16.42.1
+
+d) Enter your WordPress username, password, and OTP code into the captive portal.
 
 -------------------------------------------------------------------------------------------------------------
 5) Attack Simulation Success:
 
-a) Your Android device should log in to your WordPress account using the captive portal inputs. 
+a) The Wordpress Relay App will intercept the captured credentials/OTP and automatically log in to the target WordPress account.
 
-b) The client will be granted internet access, upon successful authentication to the captive portal.
+b) Upon successful authentication, the client will be granted full internet access through the Pineapple.
