@@ -421,10 +421,13 @@ Troubleshooting:
 - If the page preview displays incorrectly, verify that the WordPress core static assets (CSS/JS files) are present and uncorrupted.
 
 -------------------------------------------------------------------------------------------------------------
-18. Restricting Internet Access:
+18. Starting and Enabling the Evil Portal at Boot:
 
 a) Click "Start"
-(This will create the /tmp/EVILPORTAL_CLIENTS.txt) (the "Allowed Clients" list)
+(This will create the "Allowed Clients" list (/tmp/EVILPORTAL_CLIENTS.txt) and deny internet access to clients unless they successfully log in to the captive portal).
 
 b) Click "Enable on boot"
-(This will ensure the "Allowed Clients" list is cleared following a reboot.) (Otherwise connected clients will maintain persistent internet access.)
+(This will start the captive portal at system boot and ensure the "Allowed Clients" list is cleared following a reboot. Otherwise clients will maintain persistent internet access.)
+
+c) Add your Android's private IP to the "Allowed Clients" list 
+(This will allow your android to securely connect to the Wordpress domain.)
