@@ -25,24 +25,25 @@ e) Verify the Wi-Fi icon is displayed, confirming an active connection.
 -------------------------------------------------------------------------------------------------------------
 3) Prepare the Wordpress Relay Automation:
 
-a) Tap Button 1 in WordpressRelayApp to verify Termux is set up.
-(Note: If button 1 fails, ensure you completed the setup instructions in termux_setup.txt)
-
-b) Connect your Android device to the Pineapple AP.
+a) Connect your Android device to the Pineapple AP.
 (Note: Ensure the Wi-Fi icon is visible and the Pineapple has internet access.)
 
-c) Tap Button 2 in WordpressRelayApp to verify your Android Device is connected to your pineapple.
+b) Tap "START AUTO-SETUP" in WordpressRelayApp.
+(Note: If the setup fails, ensure you completed the setup instructions in termux_setup.txt)
 
-d) Tap Button 3 in WordpressRelayApp to download wordpress-relay.py and establish SSH access to the Pineapple.
-(Note: Your Pineapple SSH Password is required for the initial setup) 
+c) Enter your WordPress domain when prompted (e.g., example.com).
+(The domain will be saved and pre-filled for future use.)
 
-e) Tap Button 4 in WordpressRelayApp and enter your Wordpress domain. Wait for the browser to open and connect to your WordPress site.
-(Note: If Button 4 fails, make sure your WordPress Droplet allows inbound traffic on port 443.)
+d) If prompted, enter your Pineapple's SSH root password.
+(This is only required during initial setup - to transfer the SSH public key to the Pineapple.)
 
-Troubleshooting: 
-1) If a button fails on the first attempt, tap it again.
-2) If you just booted your Android device, wait a moment for all services/drivers to finish loading.
-3) If Button 4 fails repeatedly, restart your Android device.
+e) Wait for the automated setup to complete all 4 steps:
+   - Step 1: Termux installation verification
+   - Step 2: Pineapple connection test
+   - Step 3: SSH key setup and script download
+   - Step 4: Relay service startup
+
+f) The app will automatically launch Termux:X11 when the browser is ready.
 
 -------------------------------------------------------------------------------------------------------------
 4) Execute the Client Capture:
