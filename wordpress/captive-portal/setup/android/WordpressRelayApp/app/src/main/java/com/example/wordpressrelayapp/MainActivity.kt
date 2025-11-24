@@ -661,7 +661,7 @@ class MainActivity : AppCompatActivity() {
             }.start()
         }
 
-button4.setOnClickListener {
+        button4.setOnClickListener {
             textView.text = "Loading last URL..."
 
             Thread {
@@ -698,7 +698,7 @@ button4.setOnClickListener {
 
                     runOnUiThread {
                         val input = EditText(this@MainActivity)
-                        input.hint = "https://example.com"
+                        input.hint = "example.com"
                         input.inputType = InputType.TYPE_TEXT_VARIATION_URI
 
                         if (lastUrl.isNotEmpty()) {
@@ -710,7 +710,7 @@ button4.setOnClickListener {
 
                         val dialog = android.app.AlertDialog.Builder(this@MainActivity)
                             .setTitle("Enter WordPress Domain")
-                            .setMessage("Enter the full WordPress domain URL:")
+                            .setMessage("Enter the WordPress domain URL (https:// will be added automatically):")
                             .setView(input)
                             .setPositiveButton("Start", null)
                             .setNegativeButton("Cancel", null)
@@ -731,7 +731,7 @@ button4.setOnClickListener {
                             }
 
                             startButton.setOnClickListener {
-                                val domain = input.text.toString().trim()
+                                var domain = input.text.toString().trim()
 
                                 if (domain.isEmpty()) {
                                     textView.text = "❌ Domain cannot be empty"
@@ -739,10 +739,9 @@ button4.setOnClickListener {
                                     return@setOnClickListener
                                 }
 
+                                // Smart URL handling - add https:// if no protocol specified
                                 if (!domain.startsWith("http://") && !domain.startsWith("https://")) {
-                                    textView.text = "❌ Domain must start with http:// or https://"
-                                    dialog.dismiss()
-                                    return@setOnClickListener
+                                    domain = "https://$domain"
                                 }
 
                                 textView.text = "Saving URL and creating script…"
