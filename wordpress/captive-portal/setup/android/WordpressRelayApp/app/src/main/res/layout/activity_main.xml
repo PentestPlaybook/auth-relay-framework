@@ -6,67 +6,70 @@
     android:layout_height="match_parent"
     android:padding="16dp">
 
-    <TextView
-        android:id="@+id/textView"
+    <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:text=""
-        android:textSize="16sp"
-        android:textColor="#FFFFFF"
-        android:padding="8dp"
         android:background="#222222"
-        android:fontFamily="monospace"
         android:scrollbars="vertical"
         android:scrollbarStyle="insideOverlay"
         android:fadeScrollbars="false"
-        android:overScrollMode="always"
         android:scrollbarAlwaysDrawVerticalTrack="true"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/button1"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ready to start automated setup...\n\nPress START AUTO-SETUP to begin."
+            android:textSize="16sp"
+            android:textColor="#FFFFFF"
+            android:padding="12dp"
+            android:fontFamily="monospace" />
+
+    </ScrollView>
 
     <Button
         android:id="@+id/button1"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="termux check"
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/textView"
+        android:layout_height="60dp"
+        android:text="START AUTO-SETUP"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"
+        android:backgroundTint="#4CAF50"
+        app:layout_constraintTop_toBottomOf="@id/scrollView"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/button2"
-        app:layout_constraintHorizontal_chainStyle="spread" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Hidden buttons to maintain compatibility with existing code -->
     <Button
         android:id="@+id/button2"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="connection check"
-        android:layout_marginStart="8dp"
-        app:layout_constraintTop_toTopOf="@id/button1"
-        app:layout_constraintStart_toEndOf="@id/button1"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/button3"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="staging check"
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/button1"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/button4"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/button4"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="complete setup"
-        android:layout_marginStart="8dp"
-        app:layout_constraintTop_toTopOf="@id/button3"
-        app:layout_constraintStart_toEndOf="@id/button3"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
