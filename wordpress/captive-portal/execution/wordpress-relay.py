@@ -321,7 +321,7 @@ class MFAHandler:
 
                         print("⏳ Waiting for MFA validation...")
                         print(f"⏱️  Click happened at: {click_time}")
-                        time.sleep(1)  # Brief initial wait for page to respond
+                        time.sleep(2)  # Brief initial wait for page to respond
 
                         # Smart checking for both success AND failure
                         validation_start = time.time()
