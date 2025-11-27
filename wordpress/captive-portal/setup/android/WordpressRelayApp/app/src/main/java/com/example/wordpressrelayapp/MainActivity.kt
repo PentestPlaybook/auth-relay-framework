@@ -409,15 +409,133 @@ class MainActivity : AppCompatActivity() {
                 appendLog(textView, "✅ Python script already exists\n")
             }
 
-            // Verify SSH host key and connection
+            // ==== SSH host key verification & repair flow ====
+            // Only run this if the key wasn't just generated and transferred
             if (!needToTransferKey) {
-                appendLog(textView, "🔑 Verifying SSH connection...\n")
-                val hostKeyVerified = verifySSHHostKey(textView)
-                if (!hostKeyVerified) {
-                    appendLog(textView, "❌ SSH host key verification failed\n")
+                appendLog(textView, "🔑 Verifying SSH host key...\n")
+                
+                val hostCheckScript = """
+                    #!/data/data/com.termux/files/usr/bin/bash
+                    set +e
+                    
+                    export HOME=/data/data/com.termux/files/home
+                    export PREFIX=/data/data/com.termux/files/usr
+                    export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+                    
+                    cd "${'$'}HOME"
+                    
+                    HOST=172.16.42.1
+                    ERR1=ssh_err_1.txt
+                    ERR2=ssh_err_2.txt
+                    ERR3=ssh_err_3.txt
+                    rm -f "${'$'}ERR1" "${'$'}ERR2" "${'$'}ERR3"
+                    
+                    echo 'HOSTCHECK:START'
+                    
+                    # Try strict host key check (non-interactive)
+                    status1=0
+                    ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@${'$'}HOST true 2>"${'$'}ERR1" || status1=${'$'}?
+                    
+                    if [ ${'$'}status1 -eq 0 ]; then
+                      echo 'HOSTKEY_FAILED:NO'
+                      echo 'PUBKEY_FAILED:NO'
+                      echo 'HOSTKEY_REMOVED:NO'
+                      echo 'NEW_CONNECTION_OK:YES'
+                      echo 'HOSTCHECK:END'
+                      exit 0
+                    fi
+                    
+                    # Check if it was a host key verification failure
+                    if grep -qiE 'host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED' "${'$'}ERR1"; then
+                      echo 'HOSTKEY_FAILED:YES'
+                      # Check if pubkey auth also failed
+                      if grep -qiE 'Permission denied.*publickey' "${'$'}ERR1"; then
+                        echo 'PUBKEY_FAILED:YES'
+                      else
+                        echo 'PUBKEY_FAILED:NO'
+                      fi
+                      # Remove old key only if known_hosts exists
+                      if [ -f "${'$'}HOME/.ssh/known_hosts" ]; then
+                        if ssh-keygen -R "${'$'}HOST" >/dev/null 2>&1; then
+                          echo 'HOSTKEY_REMOVED:YES'
+                        else
+                          echo 'HOSTKEY_REMOVED:NO'
+                        fi
+                      else
+                        echo 'HOSTKEY_REMOVED:NO'
+                      fi
+                      # Reconnect, auto-accept new host key non-interactive
+                      ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@${'$'}HOST true 2>"${'$'}ERR2" || true
+                      # Verify again with strict checking
+                      status3=0
+                      ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@${'$'}HOST true 2>"${'$'}ERR3" || status3=${'$'}?
+                      if [ ${'$'}status3 -eq 0 ]; then
+                        echo 'NEW_CONNECTION_OK:YES'
+                      else
+                        echo 'NEW_CONNECTION_OK:NO'
+                      fi
+                    else
+                      # Some other failure - check if it's pubkey auth failure
+                      if grep -qiE 'Permission denied.*publickey' "${'$'}ERR1"; then
+                        echo 'HOSTKEY_FAILED:NO'
+                        echo 'PUBKEY_FAILED:YES'
+                        echo 'HOSTKEY_REMOVED:NO'
+                        echo 'NEW_CONNECTION_OK:NO'
+                      else
+                        echo 'HOSTKEY_FAILED:NO'
+                        echo 'PUBKEY_FAILED:NO'
+                        echo 'HOSTKEY_REMOVED:NO'
+                        echo 'NEW_CONNECTION_OK:NO'
+                      fi
+                    fi
+                    
+                    echo 'HOSTCHECK:END'
+                """.trimIndent()
+
+                val hostCheckScriptPath = "/sdcard/hostkey_check.sh"
+                writeFileAsRoot(hostCheckScriptPath, hostCheckScript)
+                execAsRoot("chmod 644 $hostCheckScriptPath")
+
+                val hostCheckPipeline = "cat $hostCheckScriptPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+                val hostCheckProc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", hostCheckPipeline))
+                val hostCheckOut = BufferedReader(InputStreamReader(hostCheckProc.inputStream)).use { it.readText() }
+                hostCheckProc.waitFor()
+
+                val hostKeyFailed = hostCheckOut.contains("HOSTKEY_FAILED:YES")
+                val pubkeyFailed = hostCheckOut.contains("PUBKEY_FAILED:YES")
+                val hostKeyRemoved = hostCheckOut.contains("HOSTKEY_REMOVED:YES")
+                val newConnectionOk = hostCheckOut.contains("NEW_CONNECTION_OK:YES")
+
+                // If pubkey authentication failed, prompt for password and attempt automatic key transfer
+                if (pubkeyFailed && !newConnectionOk) {
+                    appendLog(textView, "⚠️ SSH pubkey authentication failed\n")
+                    appendLog(textView, "⚙️ Prompting for SSH password to transfer key...\n")
+
+                    val password = promptForPassword(textView, "SSH Password Required", 
+                        "Enter SSH password for root@172.16.42.1:")
+                    
+                    if (password == null) {
+                        appendLog(textView, "❌ Password input cancelled\n")
+                        return false
+                    }
+
+                    appendLog(textView, "⚙️ Transferring public key to Pineapple...\n")
+                    val transferSuccess = transferKeyWithPasswordAndRegenerate(password, textView)
+                    if (!transferSuccess) {
+                        appendLog(textView, "❌ Failed to transfer SSH key\n")
+                        return false
+                    }
+                    appendLog(textView, "✅ SSH key transferred successfully\n")
+                } else if (hostKeyFailed && hostKeyRemoved && newConnectionOk) {
+                    appendLog(textView, "✅ Fixed host key issue: removed old key and accepted new key\n")
+                } else if (hostKeyFailed && !hostKeyRemoved && newConnectionOk) {
+                    appendLog(textView, "✅ Fixed host key issue: accepted new key\n")
+                } else if (!hostKeyFailed && !pubkeyFailed && newConnectionOk) {
+                    appendLog(textView, "✅ SSH host key verification passed\n")
+                } else if (!newConnectionOk) {
+                    appendLog(textView, "⚠️ SSH connection issue detected\n")
                     return false
                 }
-                appendLog(textView, "✅ SSH connection verified\n")
             }
 
             return true
@@ -768,49 +886,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun verifySSHHostKey(textView: TextView): Boolean {
-        try {
-            val hostCheckScript = """
-                #!/data/data/com.termux/files/usr/bin/bash
-                set +e
-                export HOME=/data/data/com.termux/files/home
-                export PREFIX=/data/data/com.termux/files/usr
-                export PATH="${'$'}PREFIX/bin:${'$'}PATH"
-                cd "${'$'}HOME"
-                
-                ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@172.16.42.1 true 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    echo 'VERIFY:SUCCESS'
-                    exit 0
-                fi
-                
-                # Try to accept new host key
-                ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 root@172.16.42.1 true 2>/dev/null
-                
-                # Verify again
-                ssh -i .ssh/pineapple -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=5 -o NumberOfPasswordPrompts=0 root@172.16.42.1 true 2>/dev/null
-                if [ $? -eq 0 ]; then
-                    echo 'VERIFY:SUCCESS'
-                else
-                    echo 'VERIFY:FAILED'
-                fi
-            """.trimIndent()
-
-            val hostCheckPath = "/sdcard/verify_ssh.sh"
-            writeFileAsRoot(hostCheckPath, hostCheckScript)
-            execAsRoot("chmod 644 $hostCheckPath")
-
-            val pipeline = "cat $hostCheckPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
-            val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
-            val output = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
-            proc.waitFor()
-
-            return output.contains("VERIFY:SUCCESS")
-        } catch (e: Exception) {
-            return false
-        }
-    }
-
     private fun saveDomain(domain: String) {
         try {
             val saveScript = """
@@ -973,6 +1048,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun deleteSshKeyPair(textView: TextView): Boolean {
+        try {
+            val deleteScript = """
+                #!/data/data/com.termux/files/usr/bin/bash
+                set -e
+                export HOME=/data/data/com.termux/files/home
+                export PREFIX=/data/data/com.termux/files/usr
+                export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+                cd "${'$'}HOME"
+                rm -f .ssh/pineapple .ssh/pineapple.pub
+                echo 'DELETE:SUCCESS'
+            """.trimIndent()
+
+            val deletePath = "/sdcard/delete_key.sh"
+            writeFileAsRoot(deletePath, deleteScript)
+            execAsRoot("chmod 644 $deletePath")
+
+            val pipeline = "cat $deletePath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+            val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
+            val output = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+            proc.waitFor()
+
+            return output.contains("DELETE:SUCCESS")
+        } catch (e: Exception) {
+            return false
+        }
+    }
+
     private fun transferKeyWithPasswordAndRegenerate(password: String, textView: TextView): Boolean {
         try {
             val sshpassScript = """
@@ -1065,7 +1168,69 @@ class MainActivity : AppCompatActivity() {
             val verifyOut = BufferedReader(InputStreamReader(verifyProc.inputStream)).use { it.readText() }
             verifyProc.waitFor()
 
-            return verifyOut.contains("VERIFY:SUCCESS")
+            val verifySuccess = verifyOut.contains("VERIFY:SUCCESS")
+
+            if (!verifySuccess) {
+                // Connection still failing after key transfer - likely malformed key
+                appendLog(textView, "⚠️ SSH connection still failing after key transfer\n")
+                appendLog(textView, "🔄 Detected malformed key pair - regenerating keys...\n")
+                
+                // Delete malformed keys
+                val deleteSuccess = deleteSshKeyPair(textView)
+                if (!deleteSuccess) {
+                    appendLog(textView, "❌ Failed to delete malformed keys\n")
+                    return false
+                }
+                appendLog(textView, "✅ Malformed key pair deleted\n")
+                
+                // Generate new keys
+                val newKeygenSuccess = generateSshKeyPair(textView)
+                if (!newKeygenSuccess) {
+                    appendLog(textView, "❌ Failed to generate new SSH key\n")
+                    return false
+                }
+                appendLog(textView, "✅ New SSH key pair generated\n")
+                
+                // Write password file again
+                val writePasswordProc2 = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", writePasswordPipeline))
+                val writePasswordOut2 = BufferedReader(InputStreamReader(writePasswordProc2.inputStream)).use { it.readText() }
+                writePasswordProc2.waitFor()
+
+                if (!writePasswordOut2.contains("PASSWORD_FILE_CREATED")) {
+                    appendLog(textView, "❌ Failed to create temporary password file for retry\n")
+                    return false
+                }
+                
+                // Transfer new key
+                appendLog(textView, "⚙️ Transferring newly generated key to Pineapple...\n")
+                val sshpassProc2 = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", sshpassPipeline))
+                val sshpassOut2 = BufferedReader(InputStreamReader(sshpassProc2.inputStream)).use { it.readText() }
+                sshpassProc2.waitFor()
+
+                val sshpassSuccess2 = sshpassOut2.contains("SSHPASS:SUCCESS")
+                if (!sshpassSuccess2) {
+                    appendLog(textView, "❌ Failed to transfer new key\n")
+                    return false
+                }
+                appendLog(textView, "✅ New key transferred successfully\n")
+                
+                // Verify new key works
+                appendLog(textView, "🔄 Verifying SSH connection with new key...\n")
+                val verifyProc2 = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", verifyPipeline))
+                val verifyOut2 = BufferedReader(InputStreamReader(verifyProc2.inputStream)).use { it.readText() }
+                verifyProc2.waitFor()
+
+                val verifySuccess2 = verifyOut2.contains("VERIFY:SUCCESS")
+                if (!verifySuccess2) {
+                    appendLog(textView, "⚠️ SSH connection still failing with new key\n")
+                    appendLog(textView, "   Manual troubleshooting may be required\n")
+                    return false
+                }
+                appendLog(textView, "✅ SSH connection verified with new key - pubkey authentication now working!\n")
+                return true
+            }
+
+            return true
 
         } catch (e: Exception) {
             return false
