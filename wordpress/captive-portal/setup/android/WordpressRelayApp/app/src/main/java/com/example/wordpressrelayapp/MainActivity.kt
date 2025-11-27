@@ -292,6 +292,8 @@ class MainActivity : AppCompatActivity() {
             if (exitCode == 0) {
                 appendLog(textView, "✅ Evil WPA configured successfully\n")
                 appendLog(textView, "✅ WiFi reload triggered on Pineapple\n")
+                appendLog(textView, "⏳ Waiting for WiFi to stabilize...\n")
+                Thread.sleep(10000)  // Wait 10 seconds for WiFi reload to complete
                 
                 // Save network credentials for future reference
                 saveNetworkCredentials(ssid, passphrase)
