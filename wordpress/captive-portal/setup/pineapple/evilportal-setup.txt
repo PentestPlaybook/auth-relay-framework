@@ -5,7 +5,7 @@ a) Connect to the WiFi Pineapple Admin Portal at 172.16.42.1:1471
 b) Ensure your "Open" Access Point is hidden (http://172.16.42.1:1471/#/PineAP/open)
 (This will prevent unauthorized access to your access point. For added security, add your device's MAC address to the "Client Filter" allow list: http://172.16.42.1:1471/#/PineAP/filtering.)
 
-c) Configure and Enable your "Evil WPA" Access Point:
+c) Configure and Enable your "Evil WPA" Access Point using an SSID that differs from the target network:
 
 PS C:\Users\user> ssh root@172.16.42.1
 
