@@ -17,6 +17,7 @@ import java.io.OutputStreamWriter
 import android.os.PowerManager
 import android.view.WindowManager
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 class MainActivity : AppCompatActivity() {
 
@@ -31,6 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     // Toggle state and control
     private val isRunning = AtomicBoolean(false)
+    private val currentStep = AtomicInteger(0)
     private var mainThread: Thread? = null
     private val handler = Handler(Looper.getMainLooper())
 
@@ -82,7 +84,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun runAutomatedSetup(textView: TextView, toggleButton: Button) {
+private fun runAutomatedSetup(textView: TextView, toggleButton: Button) {
         try {
             // Prompt for domain FIRST before any setup steps
             appendLog(textView, "=== DOMAIN CONFIGURATION ===\n")
@@ -96,99 +98,107 @@ class MainActivity : AppCompatActivity() {
                 return
             }
             
-            // Save the domain for future reference
             saveDomain(domain)
             appendLog(textView, "✅ Target domain: $domain\n\n")
 
             // Step 1: Check Termux installation
             if (!isRunning.get()) return
+            currentStep.set(1)
             appendLog(textView, "=== STEP 1: CHECKING TERMUX INSTALLATION ===\n")
             var step1Success = false
             var attempt = 1
-            while (!step1Success && isRunning.get()) {
+            while (!step1Success && isRunning.get() && currentStep.get() == 1) {
                 appendLog(textView, "Attempt $attempt: Verifying Termux installation...\n")
                 step1Success = checkTermuxInstallation(textView)
-                if (!step1Success && isRunning.get()) {
+                if (!step1Success && isRunning.get() && currentStep.get() == 1) {
                     appendLog(textView, "⚠️ Retrying in 5 seconds...\n\n")
                     Thread.sleep(5000)
                     attempt++
                 }
             }
-            if (!isRunning.get()) return
+            if (!isRunning.get() || currentStep.get() != 1) return
             appendLog(textView, "✅ Step 1 complete!\n\n")
 
             // Step 2: Test Pineapple connection
             if (!isRunning.get()) return
+            currentStep.set(2)
             appendLog(textView, "=== STEP 2: TESTING PINEAPPLE CONNECTION ===\n")
             var step2Success = false
             attempt = 1
-            while (!step2Success && isRunning.get()) {
+            while (!step2Success && isRunning.get() && currentStep.get() == 2) {
                 appendLog(textView, "Attempt $attempt: Testing connection to Pineapple...\n")
                 step2Success = testPineappleConnection(textView)
-                if (!step2Success && isRunning.get()) {
+                if (!step2Success && isRunning.get() && currentStep.get() == 2) {
                     appendLog(textView, "⚠️ Retrying in 10 seconds...\n\n")
                     Thread.sleep(10000)
                     attempt++
                 }
             }
-            if (!isRunning.get()) return
+            if (!isRunning.get() || currentStep.get() != 2) return
             appendLog(textView, "✅ Step 2 complete!\n\n")
 
             // Step 3: Setup prerequisites (SSH keys, scripts)
             if (!isRunning.get()) return
+            currentStep.set(3)
             appendLog(textView, "=== STEP 3: SETTING UP PREREQUISITES ===\n")
             var step3Success = false
             attempt = 1
-            while (!step3Success && isRunning.get()) {
+            while (!step3Success && isRunning.get() && currentStep.get() == 3) {
                 appendLog(textView, "Attempt $attempt: Setting up SSH keys and scripts...\n")
                 step3Success = setupPrerequisites(textView)
-                if (!step3Success && isRunning.get()) {
-                    appendLog(textView, "⚠️ Retrying in 5 seconds...\n\n")
-                    Thread.sleep(5000)
-                    attempt++
-                }
-            }
-            if (!isRunning.get()) return
-            appendLog(textView, "✅ Step 3 complete!\n\n")
-
-            // Step 4: Configure Evil WPA network
-            if (!isRunning.get()) return
-            appendLog(textView, "=== STEP 4: CONFIGURING EVIL WPA NETWORK ===\n")
-            var step3_5Success = false
-            attempt = 1
-            while (!step3_5Success && isRunning.get()) {
-                appendLog(textView, "Attempt $attempt: Configuring target network settings...\n")
-                step3_5Success = configureEvilWPA(textView)
-                if (!step3_5Success && isRunning.get()) {
+                if (!step3Success && isRunning.get() && currentStep.get() == 3) {
                     appendLog(textView, "⚠️ Retrying in 10 seconds...\n\n")
                     Thread.sleep(10000)
                     attempt++
                 }
             }
+            if (!isRunning.get() || currentStep.get() != 3) return
+            appendLog(textView, "✅ Step 3 complete!\n\n")
+
+            // Step 4: Configure Evil WPA network
             if (!isRunning.get()) return
+            currentStep.set(4)
+            appendLog(textView, "=== STEP 4: CONFIGURING EVIL WPA NETWORK ===\n")
+            var step4Success = false
+            attempt = 1
+            while (!step4Success && isRunning.get() && currentStep.get() == 4) {
+                appendLog(textView, "Attempt $attempt: Configuring target network settings...\n")
+                step4Success = configureEvilWPA(textView)
+                if (!step4Success && isRunning.get() && currentStep.get() == 4) {
+                    appendLog(textView, "⚠️ Retrying in 10 seconds...\n\n")
+                    Thread.sleep(10000)
+                    attempt++
+                }
+            }
+            if (!isRunning.get() || currentStep.get() != 4) return
             appendLog(textView, "✅ Step 4 complete!\n\n")
+            
+            // Add delay after Evil WPA configuration
+            appendLog(textView, "⏳ Waiting for WiFi to stabilize...\n")
+            Thread.sleep(10000)
 
             // Step 5: Start relay service with continuous monitoring and auto-recovery
             if (!isRunning.get()) return
+            currentStep.set(5)
             appendLog(textView, "=== STEP 5: STARTING RELAY SERVICE ===\n")
             
             // Continuous loop that will restart the service if it fails
-            while (isRunning.get()) {
-                var step4Success = false
+            while (isRunning.get() && currentStep.get() == 5) {
+                var step5Success = false
                 attempt = 1
                 
-                while (!step4Success && isRunning.get()) {
+                while (!step5Success && isRunning.get() && currentStep.get() == 5) {
                     appendLog(textView, "Attempt $attempt: Starting relay service...\n")
-                    step4Success = startRelayService(textView, domain)
+                    step5Success = startRelayService(textView, domain)
                     
-                    if (!step4Success && isRunning.get()) {
+                    if (!step5Success && isRunning.get() && currentStep.get() == 5) {
                         appendLog(textView, "⚠️ Retrying in 15 seconds...\n\n")
                         Thread.sleep(15000)
                         attempt++
                     }
                 }
                 
-                if (!isRunning.get()) break
+                if (!isRunning.get() || currentStep.get() != 5) break
                 
                 appendLog(textView, "\n" + "=".repeat(50) + "\n")
                 appendLog(textView, "✅ RELAY SERVICE STARTED SUCCESSFULLY!\n")
@@ -199,7 +209,7 @@ class MainActivity : AppCompatActivity() {
                 // Monitor the service - this will return if service fails
                 val monitorResult = monitorPythonOutputWithHealthCheck(textView)
                 
-                if (!isRunning.get()) break
+                if (!isRunning.get() || currentStep.get() != 5) break
                 
                 // If we get here, the service failed
                 if (monitorResult == MonitorResult.DNS_ERROR || monitorResult == MonitorResult.SERVICE_FAILED) {
@@ -221,6 +231,7 @@ class MainActivity : AppCompatActivity() {
                 isRunning.set(false)
                 toggleButton.text = "START AUTO-SETUP"
             }
+            currentStep.set(0)
         }
     }
 
@@ -318,10 +329,11 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             dialog = android.app.AlertDialog.Builder(this@MainActivity)
                 .setTitle("⚠️ Important Reminder")
-                .setMessage("Before continuing, please:\n\n" +
+                .setMessage("Before continuing:\n\n" +
                         "1. Identify the TARGET NETWORK you want to impersonate\n" +
-                        "2. Select the TARGET NETWORK on your deauthentication device\n\n" +
-                        "Click OK once you have selected the target network.")
+						"2. Select the TARGET NETWORK on your deauthentication device\n" +
+                        "3. Ensure the target client is connected to the TARGET NETWORK\n\n" +
+                        "Click OK once you have completed the above.")
                 .setPositiveButton("OK") { _, _ ->
                     result = true
                     latch.countDown()
