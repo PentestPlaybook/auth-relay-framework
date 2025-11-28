@@ -1,52 +1,39 @@
-1) Prepare the Simulated Access Point
+1) Connect Devices and Select Target AP:
 
-a) Power off your WiFi Pineapple.
-
-b) Create a Kali access point using the same ESSID and passphrase as the Pineapple’s Evil WPA AP:
+a) Create a Kali access point using this script:
 https://github.com/PentestPlaybook/wpa2-setup-and-hacking/blob/main/wpa2-setup.sh
 
-c) Connect your client to the Kali AP and verify the Wi-Fi icon is displayed, confirming an active connection.
+b) Connect your client to the Kali AP and verify the Wi-Fi icon is displayed, confirming an active connection.
 
-d) Select the Kali AP in your deauth tool now (before the Pineapple boots and creates an identical AP).
+c) Connect your android to the Pineapple's Management Access Point and verify the Wi-Fi icon is displayed, confirming an active connection.
 
--------------------------------------------------------------------------------------------------------------
-2) Boot the WiFi Pineapple and Configure Evil Portal:
-
-a) Power on the WiFi Pineapple and navigate to Evil Portal (http://172.16.42.1:1471/#/Modules/evilportal).
-
-b) Connect your Android device to the Pineapple's Evil WPA AP.
-
-c) Add your Android Device's private IP to the "Allowed Clients" list in Evil Portal.
-
-d) Toggle your Android Device's Wi-Fi off and on.
-
-e) Verify the Wi-Fi icon is displayed, confirming an active connection.
+d) Discover and select the Kali AP in your deauth tool.
 
 -------------------------------------------------------------------------------------------------------------
-3) Prepare the Wordpress Relay Automation:
+2) Prepare the Wordpress Relay Automation:
 
-a) Connect your Android device to the Pineapple AP.
-(Note: Ensure the Wi-Fi icon is visible and the Pineapple has internet access.)
-
-b) Tap "START AUTO-SETUP" in WordpressRelayApp.
+a) Tap "START AUTO-SETUP" in WordpressRelayApp.
 (Note: If the setup fails, ensure you completed the setup instructions in termux_setup.txt)
 
-c) Enter your WordPress domain when prompted (e.g., example.com).
+b) Enter your WordPress domain when prompted (e.g., example.com).
 (The domain will be saved and pre-filled for future use.)
 
-d) If prompted, enter your Pineapple's SSH root password.
+c) If prompted, enter your Pineapple's SSH root password.
 (This is only required during initial setup - to transfer the SSH public key to the Pineapple.)
 
-e) Wait for the automated setup to complete all 4 steps:
+d) Enter your target's SSID and passphrase when prompted.
+
+e) Wait for the automated setup to complete all 5 steps:
    - Step 1: Termux installation verification
    - Step 2: Pineapple connection test
    - Step 3: SSH key setup and script download
-   - Step 4: Relay service startup
+   - Step 4: Evil Twin (Network Clone)
+   - Step 5: Relay service startup
 
 f) The app will automatically launch Termux:X11 when the browser is ready.
 
 -------------------------------------------------------------------------------------------------------------
-4) Execute the Client Capture:
+3) Execute the Client Capture:
 
 a) Deauthenticate the Kali AP to force the client to disconnect.
 
@@ -54,10 +41,10 @@ b) The client should automatically connect to the Pineapple’s Evil WPA AP.
 
 c) Upon connection, the client will be redirected to the captive portal at 172.16.42.1
 
-d) Enter your WordPress username, password, and OTP code into the captive portal.
+d) On the client, enter your WordPress username, password, and OTP code into the captive portal.
 
 -------------------------------------------------------------------------------------------------------------
-5) Attack Simulation Success:
+4) Attack Simulation Success:
 
 a) The Wordpress Relay App will intercept the captured credentials/OTP and automatically log in to the target WordPress account.
 
