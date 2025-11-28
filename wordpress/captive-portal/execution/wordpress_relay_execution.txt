@@ -35,13 +35,15 @@ f) The app will automatically launch Termux:X11 when the browser is ready.
 -------------------------------------------------------------------------------------------------------------
 3) Execute the Client Capture:
 
-a) Deauthenticate the Kali AP to force the client to disconnect.
+a) Turn on your client's screen and ensure it is still connected to the Kali AP.
 
-b) The client should automatically connect to the Pineapple’s Evil WPA AP.
+b) Deauthenticate the Kali AP to force the client to disconnect.
 
-c) Upon connection, the client will be redirected to the captive portal at 172.16.42.1
+c) The client should automatically connect to the Pineapple’s Evil WPA AP.
 
-d) On the client, enter your WordPress username, password, and OTP code into the captive portal.
+d) Upon connection, the client will be redirected to the captive portal at 172.16.42.1
+
+e) On the client, enter your WordPress username, password, and OTP code into the captive portal.
 
 -------------------------------------------------------------------------------------------------------------
 4) Attack Simulation Success:
