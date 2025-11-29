@@ -15,7 +15,7 @@ d) Make sure to download your recovery code.
 a) Sign into your account.
 (If prompted, click: "Create new account" and "Proceed with new account")
 
-b) Enter your domain (the one you used when installing Wordpress) and click "next".
+b) Enter your domain that will be used for the Wordpress instance and click "next".
 
 c) Click "Setup Now" (under "Install DNS Records").
 
