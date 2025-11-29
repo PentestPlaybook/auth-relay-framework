@@ -32,6 +32,8 @@ e) Wait for the automated setup to complete all 5 steps:
 
 f) The app will automatically launch Termux:X11 when the browser is ready.
 
+g) Ensure your android is still connected to the WiFi Pineapple's Management AP.
+
 -------------------------------------------------------------------------------------------------------------
 3) Execute the Client Capture:
 
