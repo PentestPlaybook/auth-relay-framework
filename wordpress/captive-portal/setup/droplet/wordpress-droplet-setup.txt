@@ -20,18 +20,24 @@ b) Enter your domain that will be used for the Wordpress instance and click "nex
 c) Click "Setup Now" (under "Install DNS Records").
 
 d) Add the CNAME and TXT records with your DNS provider and then click "Next" in SendGrid.
-(If you get validation errors with the CNAME records, add only the subdomain part, before the @, for the host value) 
+(For the Host field, enter only the subdomain portion. Do not add the domain portion.)
 
-e) Under "Select your Email API plan" and "Select your Marketing Campaigns plan", select: "60 day trial" and click "Next".
+e) Select "60 day trial" under "Select your Email API plan" and "Select your Marketing Campaigns plan".
+
+f) Click "Next".
 
 ----------------------------------------------------------------------------------------------------------------------------------
 3) Create an API Key and Save it to a Safe Location:
 
 a) At "https://app.sendgrid.com/" click "Settings", "API Keys" and "Create API Key".
 
-b) Name the API Key "Wordpress", Select "Full Access" and click "Create & View".
+b) For "API Key Name" enter "Wordpress"
 
-c) Copy the API Key, save it somewhere safe, and click "Done".
+c) Select "Full Access"
+
+d) Click "Create & View".
+
+e) Copy the API Key, save it somewhere safe, and click "Done".
 
 ----------------------------------------------------------------------------------------------------------------------------------
 4) Create the Wordpress Droplet:
