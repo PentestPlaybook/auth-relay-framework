@@ -29,7 +29,8 @@ f) Click "Next".
 ----------------------------------------------------------------------------------------------------------------------------------
 3) Create an API Key and Save it to a Safe Location:
 
-a) At "https://app.sendgrid.com/" click "Settings", "API Keys" and "Create API Key".
+a) Click "Settings", "API Keys" and "Create API Key".
+(You can find these settings at: "https://app.sendgrid.com/")
 
 b) For "API Key Name" enter "Wordpress"
 
