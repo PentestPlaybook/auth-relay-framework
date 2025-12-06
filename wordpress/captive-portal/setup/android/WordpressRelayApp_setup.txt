@@ -4,7 +4,7 @@ b) cp -r auth-relay-framework/wordpress/captive-portal/setup/android/WordpressRe
 
 2) Sync and build the WordPress Relay App project in Android Studio:
 a) Open Android Studio
-b) Open the WordpressRelayApp project
+b) Click File -> Open -> "WordpressRelayApp\build.gradle"
 c) Click "File -> Sync Project with Gradle Files"
 d) Click "Build -> Generate App Bundles or APKs -> Generate APKs"
 
