@@ -46,6 +46,9 @@ b) In Magisk, ensure root access is enabled for:
 [SharedUID] Shell
 [SharedUID] Termux
 
+c) Confirm Root Execution Context:
+whoami
+
 ------------------------------------------------------------------------------------------------------------------------------------
 8. Set the TERMUX_UID environment variable to the Termux app’s UID:
 
