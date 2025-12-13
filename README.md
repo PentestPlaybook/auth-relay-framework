@@ -234,10 +234,12 @@ auth-relay-framework/
 
 # 📘 Full Documentation
 
-### 🔹 WordPress Droplet Setup  
+### 🔹 WordPress Droplet Setup
+Setup Guide:
 https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/droplet/wordpress-droplet-setup.txt
 
 ### 🔹 WiFi Pineapple Configuration  
+Evil Portal Setup Guide:
 https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/pineapple/evilportal-setup.txt  
 
 Web Root Files:  
