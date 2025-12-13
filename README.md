@@ -16,8 +16,11 @@
 
 ---
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)  
-[![Good-Faith Research](https://img.shields.io/badge/Good--Faith-Security%20Research-orange.svg)](#good-faith-security-research-policy)
+![Authorized Use Only](https://img.shields.io/badge/Use-Authorized%20Only-red)
+![Good Faith Security Research](https://img.shields.io/badge/Good--Faith-Security%20Research-orange)
+![Legal Compliance Required](https://img.shields.io/badge/Legal-Compliance%20Required-blue)
+![MIT License](https://img.shields.io/badge/License-MIT-green)
+![Safe Harbor](https://img.shields.io/badge/Safe%20Harbor-Disclose.io-critical)
 
 ---
 
