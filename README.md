@@ -1,244 +1,398 @@
-# **Auth Relay Framework**
+> ⚠️ **AUTHORIZED USE ONLY**  
+> This security research framework is intended **exclusively for authorized penetration testing, academic research, and controlled laboratory environments.**  
+>
+> **Unauthorized access to computer systems is illegal** under the U.S. Computer Fraud and Abuse Act (18 U.S.C. §1030) and equivalent laws worldwide.  
+>
+> By using this framework, you agree to:  
+> • Obtain **written authorization** from system owners  
+> • Operate **strictly within defined scope**  
+> • Conduct all activity as **good-faith security research**  
+>
+> This project exists to help organizations strengthen authentication security.  
+> **Use responsibly. Test ethically.**
+
+# 📘 Auth Relay Framework  
+**Authentication Relay Attack Simulation for Authorized Security Research**
 
 ---
 
-## ⚠️ CRITICAL: Authorized Use Only
-
-This repository contains security research tools for **authorized penetration testing and controlled research environments only**.
-
-**Unauthorized access to computer systems is a federal crime** under the Computer Fraud and Abuse Act (18 U.S.C. § 1030) and equivalent laws worldwide. Penalties include imprisonment, significant fines, and civil liability.
-
-### **You Must Have:**
-- **Written authorization** from system/network owners
-- **Defined scope and rules of engagement**
-- **Legal compliance** in all applicable jurisdictions
-- **Professional context** (contracted pentest, authorized red team, academic research, or personal lab)
-
-### **Strictly Prohibited:**
-- Unauthorized access to any system
-- Testing outside defined scope
-- Production system exploitation without approval
-- Any illegal or unethical activity
-
-**By using this framework, you accept full responsibility for ensuring lawful, authorized use.**
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)  
+[![Good-Faith Research](https://img.shields.io/badge/Good--Faith-Security%20Research-orange.svg)](#good-faith-security-research-policy)
 
 ---
 
-## 🎯 Intended Use Cases
+# 🧭 Overview
 
-✅ Authorized penetration testing engagements  
-✅ Red team exercises with proper authorization  
-✅ Academic security research (with IRB approval)  
-✅ Defensive security research in isolated labs  
-✅ MFA/authentication mechanism analysis on test systems  
-✅ Internal security validation on owned infrastructure  
+The **Auth Relay Framework** demonstrates, in a **controlled and authorized environment**, how real-world authentication relay attacks operate.  
+It is designed for:
 
----
+- Professional penetration testers  
+- Red teams / purple teams  
+- Blue-team defenders  
+- Internal security validation  
+- Academic and IRB-approved research  
+- Controlled cybersecurity labs  
 
-## 🛡️ Defensive Guidance
+The framework aligns with industry standards (PTES, OWASP, NIST, ISO 27001) and provides a safe, structured environment for authentication security research.
 
-### **Organizations: Protect Against This Attack**
-
-**Immediate Actions:**
-- **Deploy phishing-resistant MFA** (FIDO2/WebAuthn, hardware security keys)
-- **Enforce HTTPS + HSTS** on all authentication endpoints
-- **Implement certificate pinning** where feasible
-- **Monitor for rogue access points** and unusual authentication patterns
-
-**Technical Controls:**
-- Certificate transparency monitoring
-- Wireless intrusion detection systems (WIDS)
-- Anomaly detection on authentication flows
-- Geolocation and device fingerprinting
-- 802.1X network authentication
-
-**User Education:**
-- Train employees to verify certificates
-- Teach captive portal risks
-- Encourage hardware security key adoption
-- Establish clear reporting procedures for suspicious auth requests
+**Note:** Professionals using this framework often hold certifications such as **OSCP**, **OSEP**, **OSCE**, or **CREST**—although these are **not** required.
 
 ---
 
-## 📋 Pre-Deployment Checklist
-
-Before deploying this framework, verify:
-
-- [ ] Written authorization from all system/network owners
-- [ ] Signed scope of work with defined boundaries
-- [ ] Rules of engagement documented
-- [ ] Data handling and destruction procedures established
-- [ ] Client emergency contact information available
-- [ ] Professional liability insurance (recommended)
-- [ ] Test environment isolated from production systems
-
----
-
-# **WordPress Auth Relay Framework Overview**
-
-This framework demonstrates an authentication relay attack through three coordinated components:
+# 🔧 System Components
 
 ### **1. WordPress Droplet**
-- Hardened WordPress with enforced 2FA (miniOrange)
-- Let's Encrypt TLS certificates
-- SendGrid SMTP integration
-- Realistic production-like configuration
+A production-like environment featuring:
+
+- TLS via Let’s Encrypt  
+- MiniOrange 2FA enforcement  
+- SendGrid SMTP  
+- Realistic login flows  
 
 ### **2. WiFi Pineapple**
-- EvilPortal module with cloned login pages
-- Static WordPress assets for authentic rendering
-- Custom Nginx relay endpoints
-- Captive portal functionality
+Used for:
+
+- Rogue AP simulation  
+- Captive portal demonstration  
+- Controlled credential relay testing  
 
 ### **3. Rooted Android Device**
-- Termux with X11 support
-- Selenium WebDriver automation
-- Custom relay application
-- Python-based credential forwarding
+Implements:
 
-> **This demonstrates real-world MITM authentication relay attacks. Deploy only in authorized, controlled environments.**
+- Termux/X11  
+- Selenium automation  
+- Custom Android relay app  
 
----
-
-# **High-Level Objectives**
-
-## **Objective 1 — Provision the WordPress Droplet**
-Deploy hardened WordPress, configure DNS/TLS, integrate SendGrid SMTP, and enforce miniOrange 2FA
-
-## **Objective 2 — Configure the WiFi Pineapple**
-Install EvilPortal, upload cloned portal pages, add static assets, modify Nginx, and activate portal
-
-## **Objective 3 — Configure Termux and Deploy Android Relay App**
-Set up Termux environment, install required packages, and deploy custom relay application
-
-## **Objective 4 — Execute the WordPress Relay Attack Simulation**
-Launch relay workflow, capture credentials via captive portal, verify automated login and session establishment
+All components operate inside **authorized, isolated, and controlled environments** only.
 
 ---
 
-# **Full Deployment Instructions**
+# 🎯 Intended Use Cases
 
-**Complete documentation:**  
-https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/objectives.txt
+### ✔️ Allowed (Requires Written Authorization)
+- Enterprise penetration tests  
+- Red-team campaigns  
+- Blue-team training & detection validation  
+- Authentication hardening exercises  
+- Internal SOC 2 control testing  
+- HIPAA-compliant security assessments (with proper agreements)  
+- Academic cybersecurity research  
+- Private lab environments  
 
-**Individual guides:**
-- [WordPress Droplet Setup](https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/droplet/wordpress-droplet-setup.txt)
-- [WiFi Pineapple Configuration](https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/pineapple/evilportal-setup.txt)
-- [Termux Environment Setup](https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/android/termux_setup.txt)
-- [Wordpress Relay App Setup](https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/android/WordpressRelayApp_setup.txt/)
-- [Relay Demonstration](https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/execution/wordpress_relay_execution.txt)
+### ❌ Not Allowed
+- Unauthorized access to any system  
+- Real-world credential interception  
+- Attacking systems without permission  
+- Bypassing MFA outside authorized scope  
+- Evading monitoring or forensic systems  
+- Violating data protection laws (GDPR/CCPA)  
+- Any illegal activity in any jurisdiction  
 
----
-
-## 📚 Educational Value
-
-### **What This Demonstrates:**
-
-This framework illustrates limitations of non-phishing-resistant 2FA methods:
-
-- **SMS/Email OTP vulnerabilities** to real-time relay attacks
-- **Captive portal trust exploitation** in public WiFi scenarios
-- **Automated credential relay** techniques used by threat actors
-- **Certificate validation gaps** in user awareness
-
-### **Key Lessons:**
-- Traditional 2FA (SMS/email codes) can be bypassed via real-time relay
-- Phishing-resistant authentication (FIDO2, WebAuthn) prevents these attacks
-- Certificate validation and pinning are critical defensive controls
-- User education alone is insufficient without technical controls
+This is strictly a **defensive and educational framework**, not a weapon.
 
 ---
 
-## 🔄 Post-Engagement Requirements
+# 🛡️ Defensive & Educational Value
 
-### **After authorized testing:**
+### 🔐 Strengthening Authentication
+Demonstrates weaknesses in:
 
-**Immediate:**
-- Deactivate all attack infrastructure
-- Stop relay scripts and automation
-- Disconnect WiFi Pineapple access point
+- SMS/email OTP  
+- Push MFA  
+- Legacy 2FA methods  
+- Improper TLS validation  
+- Missing certificate pinning  
 
-**Data Handling:**
-- Securely delete all captured credentials
-- Remove test accounts and access logs
-- Document data destruction for compliance
+Supports migration to:
 
-**Reporting:**
-- Provide detailed findings to authorized party
-- Include specific remediation recommendations
-- Document detection gaps and control failures
+- **FIDO2**  
+- **WebAuthn**  
+- **Passkeys**  
+- **Hardware-backed MFA**
 
-**Follow-Up:**
-- Verify remediation implementation if requested
-- Conduct retesting per engagement terms
-- Archive authorization documentation per policy
+### 🧠 Training & Awareness
+Provides hands-on education for:
 
----
+- SOC analysts  
+- Blue-team defenders  
+- Red-team/pentest operators  
+- Security engineers  
+- Cybersecurity students  
 
-## 🤝 Responsible Disclosure
+Teaches:
 
-If you discover vulnerabilities during authorized testing:
+- Credential relay flow  
+- Captive portal UX exploitation  
+- MFA time sensitivity  
+- TLS trust model pitfalls  
+- Human-factor authentication gaps  
 
-1. Document thoroughly with reproduction steps
-2. Notify system owner per agreed timeline
-3. Limit exploitation to proof-of-concept only
-4. Provide actionable remediation guidance
-5. Follow responsible disclosure timelines
+### 🛠️ Defensive Guidance
+Organizations can strengthen defenses through:
 
----
+**Technical Controls**  
+- WIDS & rogue AP detection  
+- HSTS and certificate pinning  
+- Certificate Transparency monitoring  
+- Strong MFA enrollment policies  
+- Behavioral login anomaly detection  
 
-## 📞 Support and Resources
-
-**Professional Standards:**
-- PTES (Penetration Testing Execution Standard): http://www.pentest-standard.org/
-- OWASP Testing Guide: https://owasp.org/www-project-web-security-testing-guide/
-- NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
-
-**Legal Guidance:**
-- Consult cybersecurity legal counsel in your jurisdiction
-- Review applicable computer crime statutes before testing
-- Understand data protection laws (GDPR, CCPA, etc.) that may apply
-
-**Report Abuse:**
-If you observe unauthorized or illegal use of this framework:
-- Contact local law enforcement
-- Report to FBI IC3: https://www.ic3.gov/
-- Notify your organization's security team
+**Organizational Controls**  
+- Employee training on captive portal risks  
+- Hardening guest networks  
+- Authentication governance frameworks  
+- Clear reporting procedures  
 
 ---
 
-## 📄 License & Disclaimer
+# 📋 Pre-Deployment Checklist (Required for Legal Use)
 
-**MIT License** - Copyright (c) 2025 PentestPlaybook
+Before using this framework, verify the following:
 
-This software is provided "as is" for educational and authorized security testing only.
+## ✔️ Authorization Requirements
+- Written permission from all system/network owners  
+- Signed **Statement of Work (SOW)**  
+- Signed **Rules of Engagement (ROE)**  
+- Scope boundaries must be clear and documented  
 
-**The authors:**
-- Provide this framework for legitimate security research
-- Do not authorize, encourage, or condone illegal use
-- Assume no liability for misuse or unauthorized access
-- Are not responsible for ensuring you have proper authorization
+Legal teams may provide SOW/ROE templates; consult counsel as appropriate.
 
-**You (the user):**
-- Are solely responsible for lawful and authorized use
-- Must independently verify legal compliance
-- Accept all risks associated with using this framework
-- Agree to indemnify authors against claims arising from your use
+## ✔️ Compliance & Legal Review
+You must ensure compliance with:
 
-**Full license:** See LICENSE file
+### **United States**
+- CFAA (18 U.S.C. §1030)  
+- State computer misuse laws  
+
+### **International**
+- **GDPR** (EU)  
+- **CCPA / CPRA** (California)  
+- **ePrivacy Directive**  
+- Local wireless/telecom regulations  
+
+### **Industry Standards**
+- **ISO/IEC 27001** (logging & audit controls)  
+- **NIST Cybersecurity Framework**  
+- **SOC 2 Trust Service Criteria** (Security, Availability, Confidentiality)  
+- **HIPAA** Security Rule requirements if healthcare systems are in scope  
+
+### **If Payment Systems Are in Scope**
+- Ensure alignment with **PCI DSS**, including segmentation and authorization requirements.
+
+## ✔️ Data Handling & Storage
+Define procedures for:
+
+- Sanitizing captured credentials  
+- Minimal retention  
+- Secure deletion (NIST SP 800-88)  
+- Logging access control  
+- Data minimization  
+
+## ✔️ Recommended (Not Required)
+- Cyber liability or tech E&O insurance  
+- Legal counsel review prior to enterprise engagements  
 
 ---
 
-## ⚡ Final Note
+# 📚 Educational Value
 
-This framework demonstrates real attack techniques used by threat actors. It exists to help security professionals understand these methods and help organizations defend against them.
+This framework helps researchers understand:
+
+- Identity and access management weak points  
+- Practical MFA bypass mechanics (in labs only)  
+- Endpoint posture verification  
+- Real-world attacker methodology  
+- Why strong MFA alone is not enough  
+
+Ideal for:
+
+- Red/blue exercises  
+- Academic courses  
+- Cyber ranges  
+- SOC training labs  
+
+---
+
+# 📂 Repository Structure
+
+```
+auth-relay-framework/
+├── wordpress/
+│   ├── captive-portal/
+│   │   ├── setup/
+│   │   ├── execution/
+│   │   ├── objectives.txt
+│   │   └── web-root/
+│   └── cloud/
+└── README.md
+```
+
+---
+
+# 📘 Full Documentation
+
+### 🔹 WordPress Droplet Setup  
+https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/droplet/wordpress-droplet-setup.txt
+
+### 🔹 WiFi Pineapple Configuration  
+https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/pineapple/evilportal-setup.txt  
+
+Web Root Files:  
+https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/captive-portal/setup/pineapple/web-root
+
+### 🔹 Android / Termux Relay Environment  
+Termux Setup:  
+https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/android/termux_setup.txt  
+
+WordPress Relay App Setup:  
+https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/setup/android/WordpressRelayApp_setup.txt  
+
+App Source Code:  
+https://github.com/PentestPlaybook/auth-relay-framework/tree/main/wordpress/captive-portal/setup/android/WordpressRelayApp
+
+### 🔹 Relay Simulation Execution  
+Execution Guide:  
+https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/execution/wordpress_relay_execution.txt  
+
+Automation Script:  
+https://github.com/PentestPlaybook/auth-relay-framework/blob/main/wordpress/captive-portal/execution/wordpress-relay.py
+
+---
+
+# 🛡️ Good-Faith Security Research Policy
+
+This project may be used only for **good-faith research**, defined by:
+
+### **1. Authorization**
+- Documented permission is required  
+- SOW and ROE must be in place  
+- Scope boundaries must be clear  
+
+### **2. Controlled Environment**
+Testing allowed only on:
+
+- Owned systems  
+- Systems explicitly provided for testing  
+- Academic research labs  
+- Authorized red-team environments  
+
+### **3. No Harm**
+You must avoid:
+
+- Production impact  
+- Accessing personal data  
+- Excessive scope deviation  
+
+### **4. No Unauthorized Access**
+Never use this project to:
+
+- Attack real-world systems  
+- Intercept genuine user credentials  
+- Evade detection outside authorized scope  
+
+### **5. Responsible Disclosure**
+Any discovered vulnerabilities must be:
+
+- Documented  
+- Privately disclosed  
+- Never weaponized  
+
+### **Safe Harbor Alignment**
+This project aligns with principles from:
+
+- Disclose.io  
+- HackerOne Safe Harbor  
+- Bugcrowd Vulnerability Disclosure Standards  
+- DOJ 2022 CFAA Good-Faith Guidance  
+
+---
+
+# 🔄 Post-Engagement Requirements
+
+After completing authorized testing:
+
+### ✔️ Deactivate Infrastructure
+- Disable rogue APs  
+- Stop automation scripts  
+- Shut down droplet and relay components  
+
+### ✔️ Purge Sensitive Data
+Follow **NIST SP 800-88** & **ISO 27001** Annex controls.
+
+### ✔️ Deliver Findings
+Provide:
+
+- Vulnerabilities  
+- Reproduction steps  
+- Impact analysis  
+- Remediation recommendations  
+
+### ✔️ Validate Remediation
+Retest if required.
+
+---
+
+# 📄 License
+
+**MIT License © 2025 PentestPlaybook**
+
+Distributed **“as is”**, without warranty.  
+The authors:
+
+- Do **not** authorize illegal use  
+- Assume **no liability** for misuse  
+- Provide the framework for **authorized security research only**  
+
+---
+
+# 🤝 Contributing
+
+Contributions welcome for:
+
+- Defensive features  
+- Documentation  
+- Academic modules  
+- Detection enhancements  
+
+Do **not** contribute code intended for unauthorized access.
+
+---
+
+# 📞 Report Abuse
+
+If you observe misuse:
+
+- Notify affected organizations  
+- Contact appropriate authorities  
+- U.S.: FBI IC3 – https://www.ic3.gov  
+
+---
+
+# 🧩 Additional Resources
+
+**Pentesting Standards**  
+- PTES: https://www.pentest-standard.org/  
+- OWASP WSTG: https://owasp.org/www-project-web-security-testing-guide/
+
+**Bug Bounty Platforms**  
+- HackerOne: https://www.hackerone.com  
+- Bugcrowd: https://www.bugcrowd.com  
+- Intigriti: https://www.intigriti.com  
+- YesWeHack: https://www.yeswehack.com  
+
+**Compliance Frameworks**  
+- ISO/IEC 27001: https://www.iso.org/standard/82875.html  
+- NIST Cybersecurity Framework: https://www.nist.gov/cyberframework  
+- PCI DSS: https://www.pcisecuritystandards.org/  
+
+**General Legal & Security References**  
+- Disclose.io: https://disclose.io  
+- DOJ CFAA Good-Faith Guidance: https://www.justice.gov  
+
+---
+
+# ⚡ Final Note
+
+This framework exists to **strengthen authentication security**, **educate defenders**, and **support authorized cybersecurity professionals**.
 
 **Use responsibly. Test ethically. Always get authorization in writing.**
-
----
-
-**Framework Version:** 1.0  
-**Last Updated:** November 2025  
-**Maintained By:** PentestPlaybook
-
-For questions about ethical security research practices, consult appropriate legal counsel and professional advisors.
