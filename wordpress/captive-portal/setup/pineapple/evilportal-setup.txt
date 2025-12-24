@@ -28,7 +28,7 @@ root@mk7:~# uci commit wireless
 root@mk7:~# wifi reload
 
 -------------------------------------------------------------------------------------------------------------
-2. Configure rogue-AP networking:
+2. Configure Evil WPA (rogue-AP) networking:
 
 root@mk7:~# echo -e "\nconfig device\n        option name 'br-evil'\n        option type 'bridge'\n\nconfig interface 'evil'\n        option device 'br-evil'\n        option proto 'static'\n        option ipaddr '10.0.0.1'\n        option netmask '255.255.255.0'" >> /etc/config/network
 
