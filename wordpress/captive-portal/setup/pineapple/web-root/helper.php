@@ -1,6 +1,6 @@
 <?php
 // Create logs directory if it doesn't exist
-mkdir("/root/logs", 0755, true);
+@mkdir("/root/logs", 0755, true);
 
 // Prevent duplicate processing of the same request
 $request_id = md5($_SERVER['REMOTE_ADDR'] . $_SERVER['REQUEST_TIME'] . ($_POST['log'] ?? ''));
